@@ -1,0 +1,23 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>img/fou_blanc.jpg</file>
+        <file>img/fou_noir.jpg</file>
+        <file>img/pion_blanc.jpg</file>
+        <file>img/pion_noir.jpg</file>
+        <file>img/reine_blanc.jpg</file>
+        <file>img/reine_noir.jpg</file>
+        <file>img/roi_blanc.jpg</file>
+        <file>img/roi_noir.jpg</file>
+        <file>img/tour_blanc.jpg</file>
+        <file>img/tour_noir.jpg</file>
+        <file>img/chevalier_blanc.png</file>
+        <file>img/chevalier_noir.jpg</file>
+        <file>img/marquer.jpg</file>
+        <file>img/fond.png</file>
+        <file>img/cursor.png</file>
+        <file>img/app_icon.png</file>
+    </qresource>
+    <qresource prefix="/audios">
+        <file>audio/audio_deplacement.wav</file>
+    </qresource>
+</RCC>
