@@ -76,7 +76,7 @@ void Game::launchGame(bool machine)
     m_layout = make_unique<QHBoxLayout>();
 
     auto controlsLayout = make_unique<QVBoxLayout>();
-    auto controls_widget = make_unique<QWidget>();
+    auto controlsWidget = make_unique<QWidget>();
 
     m_btnRestart = make_unique<QPushButton>("Nouvelle partie");
     m_btnHome = make_unique<QPushButton>("Menu principal");
@@ -97,11 +97,11 @@ void Game::launchGame(bool machine)
     controlsLayout->addWidget(m_btnHome.release());
     controlsLayout->addWidget(m_btnRestart.release());
 
-    controls_widget->setLayout(controlsLayout.release());
-    controls_widget->setFixedSize(QSize(CONTROLS_WIDTH, CONTROLS_HEIGHT));
+    controlsWidget->setLayout(controlsLayout.release());
+    controlsWidget->setFixedSize(QSize(CONTROLS_WIDTH, CONTROLS_HEIGHT));
 
     //layout->setAlignment(Qt::AlignLeft);
-    m_layout->addWidget(controls_widget.release());
+    m_layout->addWidget(controlsWidget.release());
     m_layout->addWidget(m_chessBoard.release());
 
     m_container->setLayout(m_layout.release());

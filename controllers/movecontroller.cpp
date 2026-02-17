@@ -38,10 +38,8 @@ MoveMasks MoveController::getStandardMoves(uint8_t pos, const ChessBitBoard& boa
     uint64_t enemyPieces  = board.getOccupancy(color == WHITE ? BLACK : WHITE);
     uint64_t allOccupancy = board.getOccupancy(2);
 
-    // Déléguer le calcul brut au MoveGenerator
     uint64_t rawMoves = m_generator.getPossibleMoves(type, color, pos, allOccupancy);
 
-    // Filtrer avec le board
     uint64_t validMoves    = rawMoves & ~ownPieces;
     result.captureMoves    = validMoves & enemyPieces;
     result.quietMoves      = validMoves & ~allOccupancy;
