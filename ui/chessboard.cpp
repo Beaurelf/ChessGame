@@ -4,7 +4,6 @@
 #include <QGroupBox>
 #include <QRadioButton>
 #include <QButtonGroup>
-#include <QDebug>
 
 ChessBoard::ChessBoard(bool machine, QMainWindow* parent) : m_parent(parent), m_machine(machine) {
     m_chessController = make_unique<ChessController>(machine, parent);
@@ -51,11 +50,8 @@ void ChessBoard::setupUi() {
 void ChessBoard::setup()
 {
     setupUi();
-    // sound_.setSource(QUrl(AUDIO_DEPLACEMENT));
-    // sound_.setVolume(0.5f);
     connect(m_chessController.get(), &ChessController::moveExecuted, this, &ChessBoard::onMoveExecuted);
     connect(m_chessController.get(), &ChessController::pieceCaptured, this, &ChessBoard::onPieceCaptured);
-    connect(m_chessController.get(), &ChessController::kingInCheck, this, &ChessBoard::onKingInCheck);
     connect(m_chessController.get(), &ChessController::checkMateDetected, this, &ChessBoard::onCheckMateDetected);
     connect(m_chessController.get(), &ChessController::promotionDetected, this, &ChessBoard::onPromotionDetected);
     connect(m_chessController.get(), &ChessController::pawnPromoted, this, &ChessBoard::onPawnPromoted);
@@ -142,7 +138,6 @@ void ChessBoard::clearOldHighlights() {
 }
 
 void ChessBoard::onCellPressed(uint8_t index){
-    qDebug() << index;
     emit moveRequested(m_from, index);
 }
 
@@ -198,7 +193,6 @@ void ChessBoard::onMoveExecuted(uint8_t from, uint8_t to){
 }
 
 void ChessBoard::onMoveRequested(uint8_t to){
-    qDebug() << "to: " << to << "\n";
     emit moveRequested(m_from, to);
 }
 
@@ -207,15 +201,6 @@ void ChessBoard::onPieceCaptured(const PieceType& type, const Color& color) {
     if (labels.find(type) == labels.end() || !labels[type]) return;
     int currentCount = labels[type]->text().toInt();
     labels[type]->setText(QString::number(currentCount + 1));
-}
-
-void ChessBoard::onKingInCheck(const Color& color)
-{
-    QString playerColor = (color == WHITE ? "blanc" : "noir");
-    QMessageBox::warning(nullptr, "Échec", "Joueur " + playerColor + " votre roi est en échec !\n"
-                                                                    "Veuillez déplacer une pièce vous permettant de sortir de l'échec.\n"
-                                                                    "Aucune autre pièce que celles vous permettant de sortir de l'échec\n"
-                                                                    "ne pourra être jouée.");
 }
 
 void ChessBoard::onCheckMateDetected(const Color& loserColor)

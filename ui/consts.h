@@ -31,7 +31,6 @@ const QString BLACK_PAWN = ":/images/img/pion_noir.jpg";
 const QString MARKER = ":/images/img/marquer.jpg";
 const QString CURSOR = ":/images/img/cursor.png";
 const QString APP_ICON = ":/images/img/app_icon.png";
-const QString MOVE_AUDIO = "qrc:/audios/audio/audio_deplacement.wav";
 
 // Dimensions and Constraints
 const int BOARD_TILE_SIZE = 80;

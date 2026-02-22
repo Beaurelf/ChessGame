@@ -1,4 +1,5 @@
 QT       += core gui
+QT       += multimedia
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -11,6 +12,7 @@ CONFIG += c++17
 SOURCES += \
     controllers/chesscontroller.cpp \
     controllers/movecontroller.cpp \
+    controllers/soundcontroller.cpp \
     models/chessbitboard.cpp \
     ui/cellitem.cpp \
     ui/chessboard.cpp \
@@ -25,6 +27,7 @@ HEADERS += \
     controllers/chesscontroller.h \
     controllers/consts.h \
     controllers/movecontroller.h \
+    controllers/soundcontroller.h \
     models/chessbitboard.h \
     type.h \
     ui/cellitem.h \

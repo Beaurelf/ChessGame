@@ -18,6 +18,10 @@
         <file>img/chevalier_blanc.png</file>
     </qresource>
     <qresource prefix="/audios">
-        <file>audio/audio_deplacement.wav</file>
+        <file>audio/capture.wav</file>
+        <file>audio/deplacement.wav</file>
+        <file>audio/echec.wav</file>
+        <file>audio/ending.wav</file>
+        <file>audio/promotion.wav</file>
     </qresource>
 </RCC>

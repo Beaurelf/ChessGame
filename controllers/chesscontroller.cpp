@@ -1,6 +1,5 @@
 #include "chesscontroller.h"
 #include "controllers/consts.h"
-#include <QDebug>
 
 ChessController::ChessController(bool machine, QObject *parent) : QObject(parent), m_moveController(), m_machine(machine), m_currentPlayer(WHITE) {}
 
@@ -82,7 +81,7 @@ bool ChessController::isCheckmate(Color color, const ChessBitBoard& board) const
         // On supprime le bit traité pour passer à la pièce suivante
         myPieces &= (myPieces - 1);
     }
-    // Si on a testé toutes les pièces et qu'aucune ne peut bouger alors qu'on est en échec...
+    // Si on a testé toutes les pièces et qu'aucune ne peut bouger alors qu'on est en échec et mat ...
     return true;
 }
 
@@ -90,6 +89,14 @@ void ChessController::onPromotionPieceSelected(uint8_t pos, PieceType newType) {
     m_bitBoard.promotePawn(pos, newType, m_currentPlayer);
     emit pawnPromoted(pos, newType, m_currentPlayer);
     endTurn();
+    if (isCheckmate(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::GAME_END);
+        emit checkMateDetected(m_currentPlayer);
+    } else if (isKingInCheck(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::CHECK);
+    } else {
+        m_soundController.playSound(SoundType::PROMOTION);
+    }
 }
 
 void ChessController::onMoveRequested(uint8_t from, uint8_t to)
@@ -100,28 +107,36 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
     PieceType capturedType = m_bitBoard.getPieceType(to);
     PieceType movingType = m_bitBoard.getPieceType(from);
     Color capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
+
     m_bitBoard.update(from, to);
     emit moveExecuted(from, to);
     if (capturedType != PieceType::NONE) {
         emit pieceCaptured(capturedType, capturedColor);
     }
-    bool isWhitePromo = (m_currentPlayer == WHITE && movingType == PAWN && ((1ULL << to) & RANK_8)); // Rang 8
-    bool isBlackPromo = (m_currentPlayer == BLACK && movingType == PAWN && ((1ULL << to) & RANK_1)); // Rang 1
+    // Déterminer et jouer le bon son
+    bool isWhitePromo = (m_currentPlayer == WHITE && movingType == PAWN && ((1ULL << to) & RANK_8));
+    bool isBlackPromo = (m_currentPlayer == BLACK && movingType == PAWN && ((1ULL << to) & RANK_1));
+
     if (isWhitePromo || isBlackPromo) {
-        // IMPORTANT : On ne change pas encore de tour.
         emit promotionDetected(to);
         return;
     }
-    endTurn();
+
+    endTurn(); // Change de joueur d'abord
+
+    // Jouer le son APRÈS avoir vérifié l'échec
+    if (isCheckmate(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::GAME_END);
+        emit checkMateDetected(m_currentPlayer);
+    } else if (isKingInCheck(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::CHECK);
+    } else if (capturedType != PieceType::NONE) {
+        m_soundController.playSound(SoundType::CAPTURE);
+    } else {
+        m_soundController.playSound(SoundType::MOVE);
+    }
 }
 
 void ChessController::endTurn() {
     m_currentPlayer = (m_currentPlayer == WHITE) ? BLACK : WHITE;
-    if(isCheckmate(m_currentPlayer, m_bitBoard)){
-        emit checkMateDetected(m_currentPlayer);
-        return;
-    }
-    if(isKingInCheck(m_currentPlayer, m_bitBoard)) {
-        emit kingInCheck(m_currentPlayer);
-    }
 }

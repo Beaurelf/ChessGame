@@ -2,6 +2,7 @@
 #define CONSTS_H
 
 #include <cstdint>
+#include <QString>
 
 const uint64_t RANK_1 = 0x00000000000000FFULL;
 const uint64_t RANK_2 = 0x000000000000FF00ULL;
@@ -20,5 +21,12 @@ const uint64_t FILE_E = 0x1010101010101010ULL;
 const uint64_t FILE_F = 0x2020202020202020ULL;
 const uint64_t FILE_G = 0x4040404040404040ULL;
 const uint64_t FILE_H = 0x8080808080808080ULL;
+
+const QString MOVE_AUDIO = ":/audios/audio/deplacement.wav";
+const QString CAPTURE_AUDIO = ":/audios/audio/capture.wav";
+const QString ENDING_AUDIO = ":/audios/audio/ending.wav";
+const QString PROMOTION_AUDIO = ":/audios/audio/promotion.wav";
+const QString CHECK_AUDIO = ":/audios/audio/echec.wav";
+
 
 #endif // CONSTS_H

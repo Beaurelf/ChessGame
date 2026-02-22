@@ -1,7 +1,8 @@
 #ifndef CHESSCONTROLLER_H
 #define CHESSCONTROLLER_H
 
-#include "controllers/movecontroller.h"
+#include "soundcontroller.h"
+#include "movecontroller.h"
 #include "models/chessbitboard.h"
 #include <QObject>
 
@@ -21,7 +22,6 @@ public slots:
 signals:
     void moveExecuted(uint8_t from, uint8_t to);
     void pieceCaptured(PieceType type, const Color& color);
-    void kingInCheck(const Color& color);
     void checkMateDetected(const Color& color);
     void promotionDetected(uint8_t pos);
     void pawnPromoted(uint8_t pos, const PieceType& newType, const Color& color);
@@ -29,6 +29,7 @@ signals:
 private:
     ChessBitBoard m_bitBoard;
     MoveController m_moveController;
+    SoundController m_soundController;
     bool m_machine;
     Color m_currentPlayer;
 

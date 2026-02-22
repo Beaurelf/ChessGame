@@ -41,7 +41,6 @@ private:
     vector<uint8_t> m_highlightedCellPositions;
     set<uint8_t> m_capturedCellPositions;
     bool m_machine; // true si le joueur joue contre la machine
-    // QSoundEffect sound_;
     unordered_map<uint8_t, MoveMasks> m_legalMovesCache;
     uint8_t m_from;
 
@@ -68,7 +67,6 @@ public slots:
     void onMoveRequested(uint8_t to);
     void onMoveExecuted(uint8_t from, uint8_t to);
     void onPieceCaptured(const PieceType& type, const Color& color);
-    void onKingInCheck(const Color& color);
     void onCheckMateDetected(const Color& color);
     void onPromotionDetected(uint8_t pos);
     void onPawnPromoted(uint8_t pos, const PieceType& type, const Color& color);
