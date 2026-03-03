@@ -1,5 +1,7 @@
 QT       += core gui
 QT       += multimedia
+QT       += concurrent
+
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,6 +12,10 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    ai/chessai.cpp \
+    ai/helper.cpp \
+    ai/transpositiontable.cpp \
+    ai/zobrist.cpp \
     controllers/chesscontroller.cpp \
     controllers/movecontroller.cpp \
     controllers/soundcontroller.cpp \
@@ -24,6 +30,11 @@ SOURCES += \
     ui/timer.cpp
 
 HEADERS += \
+    ai/chessai.h \
+    ai/consts.h \
+    ai/helper.h \
+    ai/transpositiontable.h \
+    ai/zobrist.h \
     controllers/chesscontroller.h \
     controllers/consts.h \
     controllers/movecontroller.h \

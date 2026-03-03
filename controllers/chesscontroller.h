@@ -1,10 +1,12 @@
 #ifndef CHESSCONTROLLER_H
 #define CHESSCONTROLLER_H
 
+#include "ai/chessai.h"
 #include "soundcontroller.h"
 #include "movecontroller.h"
 #include "models/chessbitboard.h"
 #include <QObject>
+#include <QFutureWatcher>
 
 class ChessController: public QObject
 {
@@ -13,11 +15,12 @@ public:
     ChessController(bool machine, QObject *parent = nullptr);
     PieceType getPieceType(uint8_t pos) const;
     Color getPieceColor(uint8_t pos) const;
-    MoveMasks getLegalMoves(uint8_t pos) const;
+    MoveMasks getCurrentPlayerLegalMoves(uint8_t from) const ;
 
 public slots:
     void onMoveRequested(uint8_t from, uint8_t to);
     void onPromotionPieceSelected(uint8_t pos, PieceType newType);
+    void onAiMoveReady();
 
 signals:
     void moveExecuted(uint8_t from, uint8_t to);
@@ -31,7 +34,10 @@ private:
     MoveController m_moveController;
     SoundController m_soundController;
     bool m_machine;
+    bool m_isAiTurn;
     Color m_currentPlayer;
+    ChessAI m_chessAi;
+    QFutureWatcher<AIHelper::Move> m_aiWatcher;
 
     /**
      * @brief Vérifie si la pièce à une position donnée appartient au joueur courant.
@@ -39,10 +45,12 @@ private:
      * @return true si la case contient une pièce de la couleur demandée.
      */
     bool isCurrentPlayerPiece(uint8_t pos) const;
+    MoveMasks getLegalMoves(uint8_t pos) const;
     bool isValidMove(uint8_t from, uint8_t to) const;
     bool isKingInCheck(Color color, const ChessBitBoard& board) const;
     bool isCheckmate(Color color, const ChessBitBoard& board) const;
     void endTurn();
+    void handleAiTurnIfNeeded();
 };
 
 #endif // CHESSCONTROLLER_H

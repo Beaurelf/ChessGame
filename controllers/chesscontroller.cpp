@@ -1,7 +1,15 @@
 #include "chesscontroller.h"
 #include "controllers/consts.h"
+#include <QtConcurrent>
 
-ChessController::ChessController(bool machine, QObject *parent) : QObject(parent), m_moveController(), m_machine(machine), m_currentPlayer(WHITE) {}
+
+ChessController::ChessController(bool machine, QObject *parent) :
+    QObject(parent),
+    m_moveController(),
+    m_machine(machine),
+    m_currentPlayer(WHITE),
+    m_chessAi(7, m_currentPlayer == WHITE ? BLACK : WHITE)
+{}
 
 PieceType ChessController::getPieceType(uint8_t pos) const
 {
@@ -15,7 +23,6 @@ Color ChessController::getPieceColor(uint8_t pos) const
 
 MoveMasks ChessController::getLegalMoves(uint8_t from) const {
     MoveMasks finalMoves = {};
-    if (!isCurrentPlayerPiece(from)) return finalMoves;
 
     // Récupérer les coups "Pseudo-Légaux" (Géométrie + Obstacles)
     // Ce sont les coups possibles physiquement sans se soucier de la sécurité du roi
@@ -48,6 +55,11 @@ MoveMasks ChessController::getLegalMoves(uint8_t from) const {
     return finalMoves;
 }
 
+MoveMasks ChessController::getCurrentPlayerLegalMoves(uint8_t from) const {
+    if (m_isAiTurn || !isCurrentPlayerPiece(from)) return {};
+    return getLegalMoves(from);
+}
+
 bool ChessController::isValidMove(uint8_t from, uint8_t to) const
 {
     MoveMasks moveMasks = getLegalMoves(from);
@@ -71,7 +83,7 @@ bool ChessController::isCheckmate(Color color, const ChessBitBoard& board) const
         return false;
     }
 
-    uint64_t myPieces = m_bitBoard.getOccupancy(m_currentPlayer);
+    uint64_t myPieces = board.getOccupancy(color);
     while (myPieces) {
         uint8_t pos = __builtin_ctzll(myPieces);
         MoveMasks moves = getLegalMoves(pos);
@@ -97,11 +109,14 @@ void ChessController::onPromotionPieceSelected(uint8_t pos, PieceType newType) {
     } else {
         m_soundController.playSound(SoundType::PROMOTION);
     }
+    if (m_isAiTurn) {
+        QTimer::singleShot(300, this, &ChessController::handleAiTurnIfNeeded);
+    }
 }
 
 void ChessController::onMoveRequested(uint8_t from, uint8_t to)
 {
-    if(!isCurrentPlayerPiece(from)) return;
+    if(m_isAiTurn || !isCurrentPlayerPiece(from)) return;
     if(!isValidMove(from, to)) return;
 
     PieceType capturedType = m_bitBoard.getPieceType(to);
@@ -114,8 +129,8 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
         emit pieceCaptured(capturedType, capturedColor);
     }
     // Déterminer et jouer le bon son
-    bool isWhitePromo = (m_currentPlayer == WHITE && movingType == PAWN && ((1ULL << to) & RANK_8));
-    bool isBlackPromo = (m_currentPlayer == BLACK && movingType == PAWN && ((1ULL << to) & RANK_1));
+    bool isWhitePromo = (m_currentPlayer == WHITE && movingType == PAWN && ((1ULL << to) & ControllerConst::RANK_8));
+    bool isBlackPromo = (m_currentPlayer == BLACK && movingType == PAWN && ((1ULL << to) & ControllerConst::RANK_1));
 
     if (isWhitePromo || isBlackPromo) {
         emit promotionDetected(to);
@@ -135,8 +150,67 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
     } else {
         m_soundController.playSound(SoundType::MOVE);
     }
+    if (m_isAiTurn) {
+        QTimer::singleShot(300, this, &ChessController::handleAiTurnIfNeeded);
+    }
 }
 
 void ChessController::endTurn() {
     m_currentPlayer = (m_currentPlayer == WHITE) ? BLACK : WHITE;
+    m_isAiTurn = m_machine && !m_isAiTurn;
+}
+
+void ChessController::handleAiTurnIfNeeded()
+{
+    if (!m_isAiTurn) return;
+
+    // Lance le minimax dans un thread séparé
+    QFuture<AIHelper::Move> future = QtConcurrent::run([this]() {
+        return m_chessAi.getBestMove(m_bitBoard);
+    });
+
+    m_aiWatcher.setFuture(future);
+
+    connect(&m_aiWatcher, &QFutureWatcher<AIHelper::Move>::finished, this, &ChessController::onAiMoveReady, Qt::SingleShotConnection);
+}
+
+void ChessController::onAiMoveReady()
+{
+    const AIHelper::Move move = m_aiWatcher.result();
+    if (move.from == 255 && move.to == 255) return;
+
+    PieceType capturedType = m_bitBoard.getPieceType(move.to);
+    Color     capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
+    PieceType movingType    = m_bitBoard.getPieceType(move.from);
+
+    m_bitBoard.update(move.from, move.to);
+    emit moveExecuted(move.from, move.to);
+
+    if (capturedType != PieceType::NONE)
+        emit pieceCaptured(capturedType, capturedColor);
+
+    bool isWhitePromo = (m_currentPlayer == WHITE && movingType == PAWN
+                         && ((1ULL << move.to) & ControllerConst::RANK_8));
+    bool isBlackPromo = (m_currentPlayer == BLACK && movingType == PAWN
+                         && ((1ULL << move.to) & ControllerConst::RANK_1));
+
+    if (isWhitePromo || isBlackPromo) {
+        m_bitBoard.promotePawn(move.to, PieceType::QUEEN, m_currentPlayer);
+        emit pawnPromoted(move.to, PieceType::QUEEN, m_currentPlayer);
+    }
+
+    endTurn();
+
+    if (isCheckmate(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::GAME_END);
+        emit checkMateDetected(m_currentPlayer);
+    } else if (isKingInCheck(m_currentPlayer, m_bitBoard)) {
+        m_soundController.playSound(SoundType::CHECK);
+    } else if (capturedType != PieceType::NONE) {
+        m_soundController.playSound(SoundType::CAPTURE);
+    } else if (isWhitePromo || isBlackPromo) {
+        m_soundController.playSound(SoundType::PROMOTION);
+    } else {
+        m_soundController.playSound(SoundType::MOVE);
+    }
 }
