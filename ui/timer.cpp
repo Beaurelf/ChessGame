@@ -22,6 +22,9 @@ void Timer::update(){
         }
     }
     if(m_minutes >= 0) {
+        if(m_minutes == 0 && m_seconds == 59){
+            setStyleSheet("color: red;");
+        }
         setText(toString());
     }
 }
