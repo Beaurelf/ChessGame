@@ -22,7 +22,6 @@ Un jeu d'échecs moderne développé en C++ et Qt, avec génération de coups ba
 - Détection de pat
 - Historique des coups et notation
 - Manger en passant
-- IA
 
 ## 🏗️ Architecture
 
