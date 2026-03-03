@@ -17,4 +17,13 @@ enum Color {
     NO_COLOR
 };
 
+enum class SoundType {
+    MOVE,
+    CAPTURE,
+    CHECK,
+    CASTLE,
+    PROMOTION,
+    GAME_END,
+};
+
 #endif // TYPE_H
