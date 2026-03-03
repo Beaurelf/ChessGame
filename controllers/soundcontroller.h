@@ -4,15 +4,7 @@
 #include <QObject>
 #include <QSoundEffect>
 #include <QMap>
-
-enum class SoundType {
-    MOVE,
-    CAPTURE,
-    CHECK,
-    CASTLE,
-    PROMOTION,
-    GAME_END,
-};
+#include "type.h"
 
 class SoundController: public QObject
 {   

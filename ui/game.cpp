@@ -12,14 +12,14 @@ Game::~Game(){}
 
 void Game::setup()
 {
-    this->setWindowIcon(QIcon(APP_ICON));
+    this->setWindowIcon(QIcon(UIConsts::APP_ICON));
     this->setStyleSheet(
         "QPushButton#Controls{"
         "height: 50px; "
         "font-size: 20px; "
         "}"
         );
-    this->setFixedSize(QSize(HOME_WIDTH, HOME_HEIGHT));
+    this->setFixedSize(QSize(UIConsts::HOME_WIDTH, UIConsts::HOME_HEIGHT));
 
     m_home = make_unique<Home>();
     connect(m_home.get(), &Home::launchGame, this, &Game::launchGame);
@@ -30,7 +30,7 @@ void Game::setup()
 
 void Game::goToHome()
 {
-    this->setFixedSize(QSize(HOME_WIDTH, HOME_HEIGHT));
+    this->setFixedSize(QSize(UIConsts::HOME_WIDTH, UIConsts::HOME_HEIGHT));
     m_home = make_unique<Home>();
     connect(m_home.get(), &Home::launchGame, this, &Game::launchGame);
     connect(m_home.get(), &Home::exit, this, &Game::exit);
@@ -81,8 +81,8 @@ void Game::launchGame(bool machine)
     m_btnRestart = make_unique<QPushButton>("Nouvelle partie");
     m_btnHome = make_unique<QPushButton>("Menu principal");
 
-    QPixmap cursor(CURSOR);
-    cursor = cursor.scaled(QSize(CURSOR_SIZE, CURSOR_SIZE));
+    QPixmap cursor(UIConsts::CURSOR);
+    cursor = cursor.scaled(QSize(UIConsts::CURSOR_SIZE, UIConsts::CURSOR_SIZE));
 
     m_btnRestart->setCursor(QCursor(cursor));
     m_btnHome->setCursor(QCursor(cursor));
@@ -98,14 +98,14 @@ void Game::launchGame(bool machine)
     controlsLayout->addWidget(m_btnRestart.release());
 
     controlsWidget->setLayout(controlsLayout.release());
-    controlsWidget->setFixedSize(QSize(CONTROLS_WIDTH, CONTROLS_HEIGHT));
+    controlsWidget->setFixedSize(QSize(UIConsts::CONTROLS_WIDTH, UIConsts::CONTROLS_HEIGHT));
 
     //layout->setAlignment(Qt::AlignLeft);
     m_layout->addWidget(controlsWidget.release());
     m_layout->addWidget(m_chessBoard.release());
 
     m_container->setLayout(m_layout.release());
-    this->setFixedSize(QSize(GAME_WIDTH, GAME_HEIGHT));
+    this->setFixedSize(QSize(UIConsts::GAME_WIDTH, UIConsts::GAME_HEIGHT));
     this->setCentralWidget(m_container.release());
 }
 

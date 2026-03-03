@@ -1,5 +1,4 @@
 #include "movecontroller.h"
-#include "ui/consts.h"
 
 MoveController::MoveController() : m_generator() {}
 
@@ -21,7 +20,7 @@ MoveMasks MoveController::getAllLegalMoves(Color color, const ChessBitBoard& boa
     MoveMasks totalMasks;
     uint64_t occupancy = board.getOccupancy(color);
 
-    for (uint8_t i = 0; i < NB_CELLS; ++i) {
+    for (uint8_t i = 0; i < 64; ++i) {
         if ((occupancy >> i) & 1ULL) {
             MoveMasks pieceMoves = getLegalMoves(i, board);
             totalMasks.quietMoves |= pieceMoves.quietMoves;

@@ -25,7 +25,7 @@ uint64_t MoveGenerator::generatePawnMoves(uint8_t pos, Color color, uint64_t /*a
     if (color == Color::WHITE) {
         // Avance
         moves |= (b << 8);
-        if (b & RANK_2) moves |= (b << 16);
+        if (b & ControllerConst::RANK_2) moves |= (b << 16);
 
         // Attaques diagonales
         if (pos % 8 != 0) moves |= (b << 7);  // Nord-Ouest
@@ -33,7 +33,7 @@ uint64_t MoveGenerator::generatePawnMoves(uint8_t pos, Color color, uint64_t /*a
     } else {
         // Avance
         moves |= (b >> 8);
-        if (b & RANK_7) moves |= (b >> 16);
+        if (b & ControllerConst::RANK_7) moves |= (b >> 16);
 
         // Attaques diagonales
         if (pos % 8 != 0) moves |= (b >> 9);  // Sud-Ouest
@@ -49,25 +49,25 @@ uint64_t MoveGenerator::generateKnightMoves(uint8_t pos, Color /*color*/, uint64
 
     // --- Vers le HAUT ---
     // Up 2, Right 1 (+17) : On va à DROITE, donc interdit si on est sur la colonne H
-    moves |= (b & ~FILE_H) << 17;
+    moves |= (b & ~ControllerConst::FILE_H) << 17;
     // Up 2, Left 1 (+15) : On va à GAUCHE, donc interdit si on est sur la colonne A
-    moves |= (b & ~FILE_A) << 15;
+    moves |= (b & ~ControllerConst::FILE_A) << 15;
     // Up 1, Right 2 (+10) : On va 2x à DROITE, interdit si G ou H
-    moves |= (b & ~(FILE_G | FILE_H)) << 10;
+    moves |= (b & ~(ControllerConst::FILE_G | ControllerConst::FILE_H)) << 10;
     // Up 1, Left 2 (+6) : On va 2x à GAUCHE, interdit si A ou B
-    moves |= (b & ~(FILE_A | FILE_B)) << 6;
+    moves |= (b & ~(ControllerConst::FILE_A | ControllerConst::FILE_B)) << 6;
 
 
     // --- Vers le BAS ---
     // Down 2, Right 1 (-15) : On va à DROITE, interdit si colonne H
     // Note : 17 bas (gauche), 15 bas (droite)
-    moves |= (b & ~FILE_H) >> 15;
+    moves |= (b & ~ControllerConst::FILE_H) >> 15;
     // Down 2, Left 1 (-17) : On va à GAUCHE, interdit si colonne A
-    moves |= (b & ~FILE_A) >> 17;
+    moves |= (b & ~ControllerConst::FILE_A) >> 17;
     // Down 1, Right 2 (-6) : On va à DROITE, interdit si G ou H
-    moves |= (b & ~(FILE_G | FILE_H)) >> 6;
+    moves |= (b & ~(ControllerConst::FILE_G | ControllerConst::FILE_H)) >> 6;
     // Down 1, Left 2 (-10) : On va à GAUCHE, interdit si A ou B
-    moves |= (b & ~(FILE_A | FILE_B)) >> 10;
+    moves |= (b & ~(ControllerConst::FILE_A | ControllerConst::FILE_B)) >> 10;
 
     return moves;
 }
@@ -92,14 +92,14 @@ uint64_t MoveGenerator::generateRookMoves(uint8_t pos, Color /*color*/, uint64_t
     }
     // Est (+1)
     uint64_t e = rook;
-    while ((e & ~FILE_H) && (e << 1)) {
+    while ((e & ~ControllerConst::FILE_H) && (e << 1)) {
         e <<= 1;
         moves |= e;
         if (e & allOccupancy) break;
     }
     // Ouest (-1)
     uint64_t w = rook;
-    while ((w & ~FILE_A) && (w >> 1)) {
+    while ((w & ~ControllerConst::FILE_A) && (w >> 1)) {
         w >>= 1;
         moves |= w;
         if (w & allOccupancy) break;
@@ -114,28 +114,28 @@ uint64_t MoveGenerator::generateBishopMoves(uint8_t pos, Color /*color*/, uint64
 
     // Nord-Est (+9)
     uint64_t ne = bishop;
-    while ((ne & ~FILE_H) && (ne << 9)) {
+    while ((ne & ~ControllerConst::FILE_H) && (ne << 9)) {
         ne <<= 9;
         moves |= ne;
         if (ne & allOccupancy) break;
     }
     // Sud-Ouest (-9)
     uint64_t sw = bishop;
-    while ((sw & ~FILE_A) && (sw >> 9)) {
+    while ((sw & ~ControllerConst::FILE_A) && (sw >> 9)) {
         sw >>= 9;
         moves |= sw;
         if (sw & allOccupancy) break;
     }
     // Nord-Ouest (+7)
     uint64_t nw = bishop;
-    while ((nw & ~FILE_A) && (nw << 7)) {
+    while ((nw & ~ControllerConst::FILE_A) && (nw << 7)) {
         nw <<= 7;
         moves |= nw;
         if (nw & allOccupancy) break;
     }
     // Sud-Est (-7)
     uint64_t se = bishop;
-    while ((se & ~FILE_H) && (se >> 7)) {
+    while ((se & ~ControllerConst::FILE_H) && (se >> 7)) {
         se >>= 7;
         moves |= se;
         if (se & allOccupancy) break;
@@ -157,14 +157,14 @@ uint64_t MoveGenerator::generateKingMoves(uint8_t pos, Color /*color*/, uint64_t
     moves |= (b >> 8); // Sud
 
     // --- Mouvements Latéraux ---
-    moves |= (b & ~FILE_H) << 1; // Est (Droit)
-    moves |= (b & ~FILE_A) >> 1; // Ouest (Gauche)
+    moves |= (b & ~ControllerConst::FILE_H) << 1; // Est (Droit)
+    moves |= (b & ~ControllerConst::FILE_A) >> 1; // Ouest (Gauche)
 
     // --- Diagonales ---
-    moves |= (b & ~FILE_H) << 9; // Nord-Est
-    moves |= (b & ~FILE_A) << 7; // Nord-Ouest
-    moves |= (b & ~FILE_H) >> 7; // Sud-Est
-    moves |= (b & ~FILE_A) >> 9; // Sud-Ouest
+    moves |= (b & ~ControllerConst::FILE_H) << 9; // Nord-Est
+    moves |= (b & ~ControllerConst::FILE_A) << 7; // Nord-Ouest
+    moves |= (b & ~ControllerConst::FILE_H) >> 7; // Sud-Est
+    moves |= (b & ~ControllerConst::FILE_A) >> 9; // Sud-Ouest
 
     return moves;
 }

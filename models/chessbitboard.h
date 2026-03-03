@@ -10,6 +10,7 @@ public:
     ChessBitBoard();
 
     PieceType getPieceType(uint8_t pos) const;
+    uint64_t getPieces(const Color& color, const PieceType& type) const;
     Color getPieceColor(uint8_t pos) const;
     uint64_t getOccupancy(int index) const;
     uint8_t getKingPosition(const Color& color) const;

@@ -16,8 +16,8 @@ void PieceItem::setupUi() {
     setPos(UIHelper::getCoordinate(m_pos));
     QString imagePath = UIHelper::getPieceImagePath(m_type, m_color);
     m_pixmap = QPixmap(imagePath).scaled(
-        PIECE_ICON_SIZE,
-        PIECE_ICON_SIZE,
+        UIConsts::PIECE_ICON_SIZE,
+        UIConsts::PIECE_ICON_SIZE,
         Qt::KeepAspectRatio,
         Qt::SmoothTransformation
     );
@@ -26,7 +26,7 @@ void PieceItem::setupUi() {
 }
 
 QRectF PieceItem::boundingRect() const {
-    return QRectF(0, 0, BOARD_TILE_SIZE, BOARD_TILE_SIZE);
+    return QRectF(0, 0, UIConsts::BOARD_TILE_SIZE, UIConsts::BOARD_TILE_SIZE);
 }
 
 void PieceItem::moveToCell(int to) {
@@ -38,7 +38,7 @@ void PieceItem::moveToCell(int to) {
 
 void PieceItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*) {
     if (m_type == NONE || m_pixmap.isNull()) return;
-    qreal offset = (BOARD_TILE_SIZE - PIECE_ICON_SIZE) / 2;
+    qreal offset = (UIConsts::BOARD_TILE_SIZE - UIConsts::PIECE_ICON_SIZE) / 2;
     painter->drawPixmap(offset, offset, m_pixmap);
 }
 
@@ -53,7 +53,7 @@ void PieceItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
 }
 
 void PieceItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
-    setPos(event->scenePos() - QPointF(BOARD_TILE_SIZE / 2, BOARD_TILE_SIZE / 2));
+    setPos(event->scenePos() - QPointF(UIConsts::BOARD_TILE_SIZE / 2, UIConsts::BOARD_TILE_SIZE / 2));
     event->accept();
 }
 
@@ -62,7 +62,7 @@ void PieceItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     setZValue(1);
 
     QPointF dropPoint = pos();
-    QPointF centerPoint(dropPoint.x() + BOARD_TILE_SIZE / 2, dropPoint.y() + BOARD_TILE_SIZE / 2);
+    QPointF centerPoint(dropPoint.x() + UIConsts::BOARD_TILE_SIZE / 2, dropPoint.y() + UIConsts::BOARD_TILE_SIZE / 2);
 
     uint8_t to = UIHelper::getPosition(centerPoint);
     uint8_t from = UIHelper::getPosition(m_coord);

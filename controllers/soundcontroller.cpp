@@ -1,5 +1,5 @@
 #include "SoundController.h"
-#include "consts.h"
+#include "controllers/consts.h"
 #include <QUrl>
 #include <QTimer>
 
@@ -9,16 +9,7 @@ SoundController::SoundController(QObject* parent) : QObject(parent) {
 
 void SoundController::loadSounds() {
     // Créer les effets sonores
-    QMap<SoundType, QString> soundFiles = {
-        {SoundType::MOVE,        MOVE_AUDIO},
-        {SoundType::CAPTURE,     CAPTURE_AUDIO},
-        {SoundType::CHECK,       CHECK_AUDIO},
-        {SoundType::CASTLE,      MOVE_AUDIO},
-        {SoundType::PROMOTION,   PROMOTION_AUDIO},
-        {SoundType::GAME_END,    ENDING_AUDIO},
-    };
-
-    for (auto it = soundFiles.begin(); it != soundFiles.end(); ++it) {
+    for (auto it = ControllerConst::SOUND_FILES.begin(); it != ControllerConst::SOUND_FILES.end(); ++it) {
         QSoundEffect* sound = new QSoundEffect();
         sound->setSource(QUrl::fromLocalFile(it.value()));
         sound->setVolume(m_volume);
@@ -36,7 +27,7 @@ void SoundController::playSound(SoundType type) {
 
 void SoundController::setVolume(qreal volume) {
     m_volume = qMin(1.0, qMax(0.0, volume));
-    for (auto sound : m_sounds) {
+    for (auto sound : std::as_const(m_sounds)) {
         sound->setVolume(m_volume);
     }
 }

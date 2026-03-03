@@ -1,5 +1,4 @@
 #include "ui/chessboard.h"
-#include "ui/consts.h"
 #include "ui/helper.h"
 #include <QGroupBox>
 #include <QRadioButton>
@@ -18,7 +17,7 @@ void ChessBoard::setupUi() {
     m_capturedBlackLayout = make_unique<QVBoxLayout>();
     m_capturedWhiteLayout = make_unique<QVBoxLayout>();
 
-    m_scene->setSceneRect(0, 0, BOARD_SIZE * BOARD_TILE_SIZE, BOARD_SIZE * BOARD_TILE_SIZE);
+    m_scene->setSceneRect(0, 0, UIConsts::BOARD_SIZE * UIConsts::BOARD_TILE_SIZE, UIConsts::BOARD_SIZE * UIConsts::BOARD_TILE_SIZE);
     m_view->setScene(m_scene.get());
     m_view->setAlignment(Qt::AlignCenter);
 
@@ -50,6 +49,12 @@ void ChessBoard::setupUi() {
 void ChessBoard::setup()
 {
     setupUi();
+    connect(m_timer1.get(), &Timer::timeout, this, [this](){
+        this->onCheckMateDetected(Color::WHITE);
+    });
+    connect(m_timer2.get(), &Timer::timeout, this, [this](){
+        this->onCheckMateDetected(Color::BLACK);
+    });
     connect(m_chessController.get(), &ChessController::moveExecuted, this, &ChessBoard::onMoveExecuted);
     connect(m_chessController.get(), &ChessController::pieceCaptured, this, &ChessBoard::onPieceCaptured);
     connect(m_chessController.get(), &ChessController::checkMateDetected, this, &ChessBoard::onCheckMateDetected);
@@ -64,8 +69,8 @@ void ChessBoard::setup()
 
 void ChessBoard::setupCapturedPiecesLayouts() {
 
-    vector<QString> blackPiecesImages = {BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN};
-    vector<QString> whitePiecesImages = {WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN};
+    vector<QString> blackPiecesImages = {UIConsts::BLACK_PAWN, UIConsts::BLACK_KNIGHT, UIConsts::BLACK_BISHOP, UIConsts::BLACK_ROOK, UIConsts::BLACK_QUEEN};
+    vector<QString> whitePiecesImages = {UIConsts::WHITE_PAWN, UIConsts::WHITE_KNIGHT, UIConsts::WHITE_BISHOP, UIConsts::WHITE_ROOK, UIConsts::WHITE_QUEEN};
     vector<PieceType> pieceTypes = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN};
 
     for (size_t i = 0; i < blackPiecesImages.size(); ++i) {
@@ -75,7 +80,7 @@ void ChessBoard::setupCapturedPiecesLayouts() {
 
         m_capturedBlackLabels[pieceTypes[i]] = make_unique<QLabel>("0");
 
-        imgBlack->setFixedSize(QSize(CAPTURED_PIECE_SIZE, CAPTURED_PIECE_SIZE));
+        imgBlack->setFixedSize(QSize(UIConsts::CAPTURED_PIECE_SIZE, UIConsts::CAPTURED_PIECE_SIZE));
         imgBlack->setScaledContents(true);
         imgBlack->setPixmap(QPixmap(blackPiecesImages[i]));
 
@@ -89,7 +94,7 @@ void ChessBoard::setupCapturedPiecesLayouts() {
 
         m_capturedWhiteLabels[pieceTypes[i]] = make_unique<QLabel>("0");
 
-        imgWhite->setFixedSize(QSize(CAPTURED_PIECE_SIZE, CAPTURED_PIECE_SIZE));
+        imgWhite->setFixedSize(QSize(UIConsts::CAPTURED_PIECE_SIZE, UIConsts::CAPTURED_PIECE_SIZE));
         imgWhite->setScaledContents(true);
         imgWhite->setPixmap(QPixmap(whitePiecesImages[i]));
 
@@ -104,9 +109,9 @@ void ChessBoard::setupCapturedPiecesLayouts() {
 
 void ChessBoard::initializeBoard() {
     for (uint8_t i = 0; i < 64; ++i) {
-        uint8_t row = i / BOARD_SIZE;
-        uint8_t col = i % BOARD_SIZE;
-        QString cellColor = ((row + col) % 2 == 0) ? COLOR_WHITE : COLOR_GRAY;
+        uint8_t row = i / UIConsts::BOARD_SIZE;
+        uint8_t col = i % UIConsts::BOARD_SIZE;
+        QString cellColor = ((row + col) % 2 == 0) ? UIConsts::COLOR_WHITE : UIConsts::COLOR_GRAY;
 
         m_cells[i] = make_unique<CellItem>(i, cellColor);
         m_scene->addItem(m_cells[i].get());
@@ -141,16 +146,21 @@ void ChessBoard::onCellPressed(uint8_t index){
     emit moveRequested(m_from, index);
 }
 
-void ChessBoard::onPiecePressed(uint8_t from){
+void ChessBoard::onPiecePressed(uint8_t clickedPos){
+    auto itValidMove = std::find(m_highlightedCellPositions.begin(), m_highlightedCellPositions.end(), clickedPos);
+    if (itValidMove != m_highlightedCellPositions.end()) {
+        emit moveRequested(m_from, clickedPos);
+        return;
+    }
     clearOldHighlights();
-    m_from = from;
+    m_from = clickedPos;
     MoveMasks moveMasks;
-    auto it = m_legalMovesCache.find(from);
+    auto it = m_legalMovesCache.find(clickedPos);
     if (it != m_legalMovesCache.end()) {
-        moveMasks = m_legalMovesCache[from];
+        moveMasks = m_legalMovesCache[clickedPos];
     } else {
-        moveMasks = m_chessController->getLegalMoves(from);
-        m_legalMovesCache[from] = moveMasks;
+        moveMasks = m_chessController->getCurrentPlayerLegalMoves(clickedPos);
+        m_legalMovesCache[clickedPos] = moveMasks;
     }
 
     auto quietMovePos = UIHelper::getLegalMovePositions(moveMasks.quietMoves);
@@ -205,37 +215,36 @@ void ChessBoard::onPieceCaptured(const PieceType& type, const Color& color) {
 
 void ChessBoard::onCheckMateDetected(const Color& loserColor)
 {
+    m_timer1->stop();
+    m_timer2->stop();
     QString winnerName = (loserColor == BLACK) ? "Blanc" : "Noir";
 
-    auto dialog = make_unique<QDialog>(this);
-    dialog->setWindowTitle("Échec et Mat");
+    QDialog dialog(this);
+    dialog.setWindowTitle("Échec et Mat");
 
-    auto layout = make_unique<QVBoxLayout>();
-    auto btnGroup = make_unique<QHBoxLayout>();
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    QHBoxLayout* btnGroup = new QHBoxLayout();
 
-    auto label = make_unique<QLabel>(
-        QString("Le joueur %1 a remporté la partie !\nQue voulez-vous faire ?").arg(winnerName)
-    );
+    QLabel* label = new QLabel(QString("Le joueur %1 a remporté la partie !\nQue voulez-vous faire ?").arg(winnerName));
     label->setAlignment(Qt::AlignCenter);
 
-    auto btnRestart = make_unique<QPushButton>("Nouvelle partie");
-    auto btnMenu = make_unique<QPushButton>("Menu principal");
+    QPushButton* btnRestart = new QPushButton("Nouvelle partie");
+    QPushButton* btnMenu = new QPushButton("Menu principal");
 
-    connect(btnRestart.get(), &QPushButton::clicked, dialog.get(), &QDialog::accept);
-    connect(btnMenu.get(), &QPushButton::clicked, dialog.get(), &QDialog::reject);
+    connect(btnRestart, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(btnMenu, &QPushButton::clicked, &dialog, &QDialog::reject);
 
-    btnGroup->addWidget(btnRestart.release());
-    btnGroup->addWidget(btnMenu.release());
+    btnGroup->addWidget(btnRestart);
+    btnGroup->addWidget(btnMenu);
 
-    layout->addWidget(label.release());
-    layout->addLayout(btnGroup.release());
+    layout->addWidget(label);
+    layout->addLayout(btnGroup);
 
-    dialog->setLayout(layout.release());
-    if (dialog->exec() == QDialog::Accepted) {
+    if (dialog.exec() == QDialog::Accepted) {
         emit restart();
-        return;
+    } else {
+        emit goToHome();
     }
-    emit goToHome();
 }
 
 
@@ -243,7 +252,7 @@ void ChessBoard::onPromotionDetected(uint8_t pos)
 {
     auto fenetre = make_unique<QDialog>(this);
     fenetre->setWindowTitle("Promotion du Pion");
-    fenetre->setFixedSize(PROMOTION_DIALOG_SIZE, PROMOTION_DIALOG_SIZE);
+    fenetre->setFixedSize(UIConsts::PROMOTION_DIALOG_SIZE, UIConsts::PROMOTION_DIALOG_SIZE);
 
     // 2. Création des layouts et conteneurs
     auto mainLayout = make_unique<QVBoxLayout>();

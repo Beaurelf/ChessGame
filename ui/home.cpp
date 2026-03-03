@@ -25,8 +25,8 @@ Home::Home(QMainWindow *parent) :
     QPushButton* btn2 = new QPushButton("J1 VS J2");
     QPushButton* btnExit = new QPushButton("Quitter");
 
-    QPixmap cursor(CURSOR);
-    cursor = cursor.scaled(QSize(CURSOR_SIZE, CURSOR_SIZE));
+    QPixmap cursor(UIConsts::CURSOR);
+    cursor = cursor.scaled(QSize(UIConsts::CURSOR_SIZE, UIConsts::CURSOR_SIZE));
 
     btn1->setCursor(QCursor(cursor));
     btn2->setCursor(QCursor(cursor));
@@ -46,7 +46,7 @@ Home::Home(QMainWindow *parent) :
     opacityWidget->setGraphicsEffect(opacityEffect);
 
     widget->setLayout(opacityLayout);
-    widget->setContentsMargins(HOME_CONSTRAINT, HOME_CONSTRAINT, HOME_CONSTRAINT, HOME_CONSTRAINT);
+    widget->setContentsMargins(UIConsts::HOME_CONSTRAINT, UIConsts::HOME_CONSTRAINT, UIConsts::HOME_CONSTRAINT, UIConsts::HOME_CONSTRAINT);
 
     container->addWidget(widget, Qt::AlignCenter);
 

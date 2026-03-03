@@ -1,8 +1,9 @@
-#ifndef CONSTS_H
-#define CONSTS_H
+#ifndef UI_CONSTS_H
+#define UI_CONSTS_H
 
 #include <QString>
 
+namespace UIConsts{
 // Colors
 const QString COLOR_WHITE = "white";
 const QString COLOR_BLACK = "black";
@@ -59,5 +60,6 @@ const int HOME_CONSTRAINT = 150;
 
 const int NB_CELLS = 64;
 
+}
 
 #endif // CONSTS_H

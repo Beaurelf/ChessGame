@@ -16,7 +16,7 @@ CellItem::CellItem(int cellIndex, QString color, QGraphicsItem* parent)
 }
 
 QRectF CellItem::boundingRect() const {
-    return QRectF(0, 0, BOARD_TILE_SIZE, BOARD_TILE_SIZE);
+    return QRectF(0, 0, UIConsts::BOARD_TILE_SIZE, UIConsts::BOARD_TILE_SIZE);
 }
 
 void CellItem::setHighlight(bool active, bool isCapture) {
@@ -36,7 +36,7 @@ void CellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* option, 
     if (!m_isHighlighted) return;
     if (m_isCapture) {
         // Style pour une capture : on recouvre d'une couleur spécifique (Beige)
-        QColor captureColor(COLOR_RED);
+        QColor captureColor(UIConsts::COLOR_RED);
         captureColor.setAlpha(150);
         painter->fillRect(rec, captureColor);
     } else {
@@ -45,15 +45,15 @@ void CellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* option, 
         painter->setPen(Qt::NoPen);
 
         // Création du gradient radial pour un effet plus doux
-        QRadialGradient gradient(center, BOARD_TILE_SIZE / 5);
-        QColor markerColor = QColor(COLOR_BLACK);
+        QRadialGradient gradient(center, UIConsts::BOARD_TILE_SIZE / 5);
+        QColor markerColor = QColor(UIConsts::COLOR_BLACK);
         markerColor.setAlpha(150);
 
         gradient.setColorAt(0, markerColor);
         gradient.setColorAt(1, Qt::transparent);
 
         painter->setBrush(QBrush(gradient));
-        painter->drawEllipse(center, BOARD_TILE_SIZE / 6, BOARD_TILE_SIZE / 6);
+        painter->drawEllipse(center, UIConsts::BOARD_TILE_SIZE / 6, UIConsts::BOARD_TILE_SIZE / 6);
     }
 
 }

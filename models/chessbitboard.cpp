@@ -36,6 +36,10 @@ uint64_t ChessBitBoard::getOccupancy(int index) const {
     return m_occupancies[index];
 };
 
+uint64_t ChessBitBoard::getPieces(const Color& color, const PieceType& type) const {
+    return m_pieces[color][type];
+}
+
 bool ChessBitBoard::isOccupied(uint8_t pos) const {
     return m_occupancies[2] & (1ULL << pos);
 }

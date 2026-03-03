@@ -1,6 +1,7 @@
 #ifndef CHESSBOARD_H
 #define CHESSBOARD_H
 
+#include "ui/consts.h"
 #include "controllers/chesscontroller.h"
 #include "ui/Timer.h"
 #include "ui/cellitem.h"
@@ -17,7 +18,6 @@
 #include <memory>
 
 using namespace std;
-typedef array<unique_ptr<CellItem>, NB_CELLS> Cells;
 
 
 class ChessBoard: public QWidget
@@ -36,7 +36,7 @@ private:
     unique_ptr<QVBoxLayout> m_capturedWhiteLayout;
     unordered_map<PieceType, unique_ptr<QLabel>> m_capturedWhiteLabels;
     unordered_map<PieceType, unique_ptr<QLabel>> m_capturedBlackLabels;
-    Cells m_cells;
+    array<unique_ptr<CellItem>, UIConsts::NB_CELLS> m_cells;
     unordered_map<uint8_t, unique_ptr<PieceItem>> m_pieceItems;
     vector<uint8_t> m_highlightedCellPositions;
     set<uint8_t> m_capturedCellPositions;
@@ -63,7 +63,7 @@ signals:
 
 public slots:
     void onCellPressed(uint8_t index);
-    void onPiecePressed(uint8_t from);
+    void onPiecePressed(uint8_t clickedPos);
     void onMoveRequested(uint8_t to);
     void onMoveExecuted(uint8_t from, uint8_t to);
     void onPieceCaptured(const PieceType& type, const Color& color);
