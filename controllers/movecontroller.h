@@ -16,7 +16,8 @@ public:
     MoveController();
 
     MoveMasks getLegalMoves(uint8_t pos, const ChessBitBoard& board) const;
-    MoveMasks getAllLegalMoves(Color color, const ChessBitBoard& board) const;
+    MoveMasks getAllLegalMoves(Color color, ChessBitBoard& board) const;
+    bool isKingInCheck(Color color, const ChessBitBoard& board) const;
 
 private:
     MoveGenerator m_generator;

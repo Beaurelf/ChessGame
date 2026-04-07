@@ -1,45 +1,63 @@
 #include <QDebug>
 #include "controllers/movecontroller.h"
 #include "type.h"
+#include <algorithm>
 #include <cstdlib>
 #include <limits>
 #include "chessai.h"
 
 ChessAI::ChessAI(int depth, Color aiColor) : m_depth(depth), m_aiColor(aiColor) {}
 
+void ChessAI::setPositionHistory(const std::unordered_map<uint64_t, int>& positionHistory)
+{
+    m_positionHistory = positionHistory;
+}
+
+int ChessAI::drawScore(const ChessBitBoard& board) const
+{
+    int staticEval = evaluateBoard(board);
+
+    if (staticEval > 120)  return -200 - std::min(staticEval / 8, 200);
+    if (staticEval < -120) return  120 + std::min((-staticEval) / 8, 120);
+    return 0;
+}
 
 // ─────────────────────────────────────────────
 // MINIMAX + ALPHA-BETA
 // ─────────────────────────────────────────────
-ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing)
+ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing,
+                                        std::unordered_map<uint64_t, int>& repetitionCounts)
 {
     Color currentColor = maximizing ? m_aiColor : (m_aiColor == WHITE ? BLACK : WHITE);
+    Color nextColor    = (currentColor == WHITE) ? BLACK : WHITE;
     uint64_t hash      = m_zobrist.hash(board, currentColor);
+
+    int repetitionCount = 0;
+    auto repetitionIt = repetitionCounts.find(hash);
+    if (repetitionIt != repetitionCounts.end())
+        repetitionCount = repetitionIt->second;
+
+    if (repetitionCount >= 3 || board.isFiftyMoveRuleReached())
+        return { drawScore(board), {255, 255} };
+
+    const bool canUseTT = (repetitionCount <= 1);
 
     // 1. Probe TT
     TTEntry ttEntry;
-    if (m_tt.probe(hash, depth, alpha, beta, ttEntry))
+    if (canUseTT && m_tt.probe(hash, depth, alpha, beta, ttEntry))
         return { ttEntry.score, ttEntry.bestMove };
 
     auto moves = AIHelper::generateAllMoves(board, currentColor);
 
     // 2. Cas terminal — aucun coup disponible
     if (moves.empty()) {
-        // Vérifier si le roi est en échec
         MoveController mc;
-        Color enemy     = (currentColor == WHITE) ? BLACK : WHITE;
         uint64_t kingBB = board.getPieces(currentColor, KING);
 
-        if (kingBB) {
-            uint8_t kingPos      = __builtin_ctzll(kingBB);
-            MoveMasks enemyMoves = mc.getAllLegalMoves(enemy, board);
-
-            if (enemyMoves.captureMoves & (1ULL << kingPos)) {
-                // Mat — score dépend de qui est maté + depth pour préférer mat rapide
-                return { maximizing ? -100000 - depth : 100000 + depth, {255, 255} };
-            }
+        if (kingBB && mc.isKingInCheck(currentColor, board)) {
+            // Mat — score dépend de qui est maté + depth pour préférer mat rapide
+            return { maximizing ? -100000 - depth : 100000 + depth, {255, 255} };
         }
-        // Pat — position nulle
         return { 0, {255, 255} };
     }
 
@@ -48,13 +66,19 @@ ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alp
         return { quiescence(board, alpha, beta, maximizing), {255, 255} };
 
     // 4. TT move ordering — mettre le meilleur move connu en premier
-    AIHelper::Move ttMove = m_tt.getBestMove(hash);
+    AIHelper::Move ttMove = canUseTT ? m_tt.getBestMove(hash) : AIHelper::Move{255, 255};
     if (ttMove.from != 255) {
         auto it = std::find_if(moves.begin(), moves.end(), [&](const AIHelper::Move& m) {
             return m.from == ttMove.from && m.to == ttMove.to;
         });
         if (it != moves.end()) std::iter_swap(moves.begin(), it);
     }
+
+    auto decrementRepetition = [&](uint64_t key) {
+        auto it = repetitionCounts.find(key);
+        if (it == repetitionCounts.end()) return;
+        if (--it->second == 0) repetitionCounts.erase(it);
+    };
 
     MinimaxResult best;
     best.bestMove = moves[0];
@@ -64,7 +88,12 @@ ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alp
         best.score = std::numeric_limits<int>::min();
         for (const AIHelper::Move& move : moves) {
             board.update(move.from, move.to);
-            int score = minimax(board, depth - 1, alpha, beta, false).score;
+            uint64_t nextHash = m_zobrist.hash(board, nextColor);
+            ++repetitionCounts[nextHash];
+
+            int score = minimax(board, depth - 1, alpha, beta, false, repetitionCounts).score;
+
+            decrementRepetition(nextHash);
             board.undo();
             if (score > best.score) {
                 best.score    = score;
@@ -78,7 +107,12 @@ ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alp
         best.score = std::numeric_limits<int>::max();
         for (const AIHelper::Move& move : moves) {
             board.update(move.from, move.to);
-            int score = minimax(board, depth - 1, alpha, beta, true).score;
+            uint64_t nextHash = m_zobrist.hash(board, nextColor);
+            ++repetitionCounts[nextHash];
+
+            int score = minimax(board, depth - 1, alpha, beta, true, repetitionCounts).score;
+
+            decrementRepetition(nextHash);
             board.undo();
             if (score < best.score) {
                 best.score    = score;
@@ -91,7 +125,8 @@ ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alp
     }
 
     // 5. Stocker dans TT
-    m_tt.store(hash, depth, best.score, flag, best.bestMove);
+    if (canUseTT)
+        m_tt.store(hash, depth, best.score, flag, best.bestMove);
 
     return best;
 }
@@ -102,11 +137,18 @@ ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alp
 AIHelper::Move ChessAI::getBestMove(ChessBitBoard& board)
 {
     AIHelper::Move bestMove = {255, 255};
+    std::unordered_map<uint64_t, int> repetitionCounts = m_positionHistory;
+
+    uint64_t rootHash = m_zobrist.hash(board, m_aiColor);
+    if (repetitionCounts.find(rootHash) == repetitionCounts.end())
+        repetitionCounts[rootHash] = 1;
+
     for (int d = 1; d <= m_depth; d++) {
         auto result = minimax(board, d,
                               std::numeric_limits<int>::min(),
                               std::numeric_limits<int>::max(),
-                              true);
+                              true,
+                              repetitionCounts);
         if (result.bestMove.from != 255)
             bestMove = result.bestMove;
     }
@@ -139,12 +181,8 @@ int ChessAI::quiescence(ChessBitBoard& board, int alpha, int beta, bool maximizi
         Color enemy     = (color == WHITE) ? BLACK : WHITE;
         uint64_t kingBB = board.getPieces(color, KING);
 
-        if (kingBB) {
-            uint8_t kingPos      = __builtin_ctzll(kingBB);
-            MoveMasks enemyMoves = mc.getAllLegalMoves(enemy, board);
-            if (enemyMoves.captureMoves & (1ULL << kingPos))
-                return maximizing ? -100000 : 100000; // mat
-        }
+        if (kingBB && mc.isKingInCheck(color, board))
+            return maximizing ? -100000 : 100000; // mat
         return 0; // pat
     }
 
@@ -272,6 +310,13 @@ int ChessAI::evaluateBoard(const ChessBitBoard& board) const
     score += (materialScore  (board, m_aiColor) - materialScore  (board, opp)) * 10;
     score += (pstScore       (board, m_aiColor) - pstScore       (board, opp)) * 1;
     score += (pawnStructScore(board, m_aiColor) - pawnStructScore(board, opp)) * 1;
+
+    const int halfmoveClock = board.getHalfmoveClock();
+    if (halfmoveClock > 80) {
+        int drawPressure = (halfmoveClock - 80) * 6;
+        if (score > 0) score -= drawPressure;
+        else if (score < 0) score += drawPressure / 2;
+    }
 
     return score;
 }

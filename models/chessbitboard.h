@@ -15,6 +15,7 @@ struct UndoInfo {
     Color capturedColor;
     uint8_t castlingRights;
     uint8_t previousEnPassantSquare;
+    uint16_t previousHalfmoveClock;
     uint8_t enPassantCaptureSquare;
     bool isEnPassantCapture;
 };
@@ -32,6 +33,8 @@ public:
 
     uint8_t getCastlingRights() const;
     uint8_t getEnPassantTarget() const;
+    uint16_t getHalfmoveClock() const;
+    bool isFiftyMoveRuleReached() const;
     bool isEnPassantMove(uint8_t from, uint8_t to) const;
     uint8_t getEnPassantCaptureSquare(uint8_t to, Color movingColor) const;
     PieceType getPieceType(uint8_t pos) const;
@@ -52,6 +55,7 @@ private:
     uint64_t m_occupancies[3];
     uint8_t m_castlingRights;
     uint8_t m_enPassantTarget;
+    uint16_t m_halfmoveClock;
     std::vector<UndoInfo> m_undoStack;
     void setupDefaultBoardPieces();
     void updateOccupancies();

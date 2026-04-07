@@ -3,11 +3,20 @@
 ChessBitBoard::ChessBitBoard() {
     m_castlingRights = CASTLE_WK | CASTLE_WQ | CASTLE_BK | CASTLE_BQ;
     m_enPassantTarget = NO_EN_PASSANT;
+    m_halfmoveClock = 0;
     setupDefaultBoardPieces();
 }
 
 uint8_t ChessBitBoard::getCastlingRights() const {
     return m_castlingRights;
+}
+
+uint16_t ChessBitBoard::getHalfmoveClock() const {
+    return m_halfmoveClock;
+}
+
+bool ChessBitBoard::isFiftyMoveRuleReached() const {
+    return m_halfmoveClock >= 100;
 }
 
 uint8_t ChessBitBoard::getEnPassantTarget() const {
@@ -54,11 +63,14 @@ void ChessBitBoard::update(uint8_t from, uint8_t to)
         movingColor, capturedColor,
         m_castlingRights,
         previousEnPassantSquare,
+        m_halfmoveClock,
         enPassantCaptureSquare,
         isEnPassantCapture
     });
 
     m_enPassantTarget = NO_EN_PASSANT;
+    if (movingType == PAWN || capturedType != NONE) m_halfmoveClock = 0;
+    else ++m_halfmoveClock;
 
     if (capturedType != NONE) {
         uint8_t captureSquare = isEnPassantCapture ? enPassantCaptureSquare : to;
@@ -136,6 +148,7 @@ void ChessBitBoard::undo()
     // Restore special-move state
     m_castlingRights = info.castlingRights;
     m_enPassantTarget = info.previousEnPassantSquare;
+    m_halfmoveClock = info.previousHalfmoveClock;
 
     if (info.promotedTo != NONE) {
         // Retirer la pièce promue

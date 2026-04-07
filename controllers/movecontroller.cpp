@@ -16,18 +16,44 @@ MoveMasks MoveController::getLegalMoves(uint8_t pos, const ChessBitBoard& board)
     return getPawnMoves(pos, board, color);
 }
 
-MoveMasks MoveController::getAllLegalMoves(Color color, const ChessBitBoard& board) const {
+MoveMasks MoveController::getAllLegalMoves(Color color,  ChessBitBoard& board) const {
     MoveMasks totalMasks;
     uint64_t occupancy = board.getOccupancy(color);
 
-    for (uint8_t i = 0; i < 64; ++i) {
-        if ((occupancy >> i) & 1ULL) {
-            MoveMasks pieceMoves = getLegalMoves(i, board);
-            totalMasks.quietMoves |= pieceMoves.quietMoves;
-            totalMasks.captureMoves |= pieceMoves.captureMoves;
-        }
+    while (occupancy) {
+        uint8_t from = __builtin_ctzll(occupancy);
+        occupancy &= occupancy - 1;
+
+        MoveMasks pseudoMoves = getLegalMoves(from, board);
+
+        auto appendLegalMoves = [&](uint64_t mask, uint64_t& targetMask) {
+            while (mask) {
+                uint8_t to = __builtin_ctzll(mask);
+                mask &= mask - 1;
+
+                board.update(from, to);
+
+                if (!isKingInCheck(color, board)) {
+                    targetMask |= (1ULL << to);
+                }
+                board.undo();
+            }
+        };
+
+        appendLegalMoves(pseudoMoves.quietMoves, totalMasks.quietMoves);
+        appendLegalMoves(pseudoMoves.captureMoves, totalMasks.captureMoves);
     }
+
     return totalMasks;
+}
+
+bool MoveController::isKingInCheck(Color color, const ChessBitBoard& board) const {
+    uint64_t kingBB = board.getPieces(color, PieceType::KING);
+    if (!kingBB) return false;
+
+    Color enemyColor = (color == WHITE) ? BLACK : WHITE;
+    uint8_t kingPos = board.getKingPosition(color);
+    return isCellAttacked(kingPos, enemyColor, board);
 }
 
 MoveMasks MoveController::getStandardMoves(uint8_t pos, const ChessBitBoard& board, PieceType type, Color color) const {

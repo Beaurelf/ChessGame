@@ -60,6 +60,7 @@ void ChessBoard::setup()
     connect(m_chessController.get(), &ChessController::enPassantCapturePerformed, this, &ChessBoard::onEnPassantCapturePerformed);
     connect(m_chessController.get(), &ChessController::pieceCaptured, this, &ChessBoard::onPieceCaptured);
     connect(m_chessController.get(), &ChessController::checkMateDetected, this, &ChessBoard::onCheckMateDetected);
+    connect(m_chessController.get(), &ChessController::drawDetected, this, &ChessBoard::onDrawDetected);
     connect(m_chessController.get(), &ChessController::promotionDetected, this, &ChessBoard::onPromotionDetected);
     connect(m_chessController.get(), &ChessController::pawnPromoted, this, &ChessBoard::onPawnPromoted);
     connect(this, &ChessBoard::moveRequested, m_chessController.get(), &ChessController::onMoveRequested);
@@ -268,6 +269,39 @@ void ChessBoard::onCheckMateDetected(const Color& loserColor)
     }
 }
 
+void ChessBoard::onDrawDetected(const QString& reason)
+{
+    m_timer1->stop();
+    m_timer2->stop();
+
+    QDialog dialog(this);
+    dialog.setWindowTitle("Partie nulle");
+
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    QHBoxLayout* btnGroup = new QHBoxLayout();
+
+    QLabel* label = new QLabel(QString("La partie est nulle.\nRaison : %1\n\nQue voulez-vous faire ?").arg(reason));
+    label->setAlignment(Qt::AlignCenter);
+    label->setWordWrap(true);
+
+    QPushButton* btnRestart = new QPushButton("Nouvelle partie");
+    QPushButton* btnMenu = new QPushButton("Menu principal");
+
+    connect(btnRestart, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(btnMenu, &QPushButton::clicked, &dialog, &QDialog::reject);
+
+    btnGroup->addWidget(btnRestart);
+    btnGroup->addWidget(btnMenu);
+
+    layout->addWidget(label);
+    layout->addLayout(btnGroup);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        emit restart();
+    } else {
+        emit goToHome();
+    }
+}
 
 void ChessBoard::onPromotionDetected(uint8_t pos)
 {

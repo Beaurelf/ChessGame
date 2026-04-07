@@ -7,6 +7,8 @@
 #include "models/chessbitboard.h"
 #include <QObject>
 #include <QFutureWatcher>
+#include <QString>
+#include <unordered_map>
 
 class ChessController: public QObject
 {
@@ -28,6 +30,7 @@ signals:
     void enPassantCapturePerformed(uint8_t capturedPos);
     void pieceCaptured(PieceType type, const Color& color);
     void checkMateDetected(const Color& color);
+    void drawDetected(const QString& reason);
     void promotionDetected(uint8_t pos);
     void pawnPromoted(uint8_t pos, const PieceType& newType, const Color& color);
 
@@ -37,8 +40,11 @@ private:
     SoundController m_soundController;
     bool m_machine;
     bool m_isAiTurn;
+    bool m_gameOver;
     Color m_currentPlayer;
     ChessAI m_chessAi;
+    Zobrist m_zobrist;
+    std::unordered_map<uint64_t, int> m_positionCounts;
     QFutureWatcher<AIHelper::Move> m_aiWatcher;
 
     /**
@@ -50,7 +56,11 @@ private:
     MoveMasks getLegalMoves(uint8_t pos);
     bool isValidMove(uint8_t from, uint8_t to);
     bool isKingInCheck(Color color, const ChessBitBoard& board) const ;
-    bool isCheckmate(Color color, const ChessBitBoard& board);
+    bool isCheckmate(Color color, ChessBitBoard& board);
+    bool resolveTurnState(bool castling, PieceType capturedType, bool promotion);
+    void registerCurrentPosition();
+    bool isThreefoldRepetition() const;
+    bool isFiftyMoveRuleReached() const;
     void endTurn();
     void handleAiTurnIfNeeded();
 };

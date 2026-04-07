@@ -13,6 +13,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QString>
 #include <QWidget>
 #include <vector>
 #include <memory>
@@ -70,6 +71,7 @@ public slots:
     void onEnPassantCapturePerformed(uint8_t capturedPos);
     void onPieceCaptured(const PieceType& type, const Color& color);
     void onCheckMateDetected(const Color& color);
+    void onDrawDetected(const QString& reason);
     void onPromotionDetected(uint8_t pos);
     void onPawnPromoted(uint8_t pos, const PieceType& type, const Color& color);
 };

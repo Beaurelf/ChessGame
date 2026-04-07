@@ -27,11 +27,7 @@ std::vector<Move> generateAllMoves(ChessBitBoard& board, Color color)
                 board.update(from, to);
 
                 // Vérifier que le roi de la couleur courante n'est pas en échec
-                Color enemyColor = (color == WHITE) ? BLACK : WHITE;
-                uint8_t kingPos  = board.getKingPosition(color);
-                MoveMasks enemyMoves = mc.getAllLegalMoves(enemyColor, board);
-
-                if (!(enemyMoves.captureMoves & (1ULL << kingPos)))
+                if (!mc.isKingInCheck(color, board))
                     valid |= (1ULL << to);
                 board.undo();
             }

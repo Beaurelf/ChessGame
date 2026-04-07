@@ -6,12 +6,14 @@
 #include "models/chessbitboard.h"
 #include "ai/helper.h"
 #include "type.h"
+#include <unordered_map>
 
 class ChessAI
 {
 public:
     explicit ChessAI(int depth, Color aiColor);
     AIHelper::Move getBestMove(ChessBitBoard& board);
+    void setPositionHistory(const std::unordered_map<uint64_t, int>& positionHistory);
 
 private:
     struct MinimaxResult {
@@ -23,12 +25,15 @@ private:
     Color m_aiColor;
     Zobrist m_zobrist;
     TranspositionTable m_tt;
+    std::unordered_map<uint64_t, int> m_positionHistory;
 
     // ─────────────────────────────────────────────
     // MINIMAX + ALPHA-BETA
     // ─────────────────────────────────────────────
-    MinimaxResult minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing);
+    MinimaxResult minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing,
+                          std::unordered_map<uint64_t, int>& repetitionCounts);
 
+    int drawScore(const ChessBitBoard& board) const;
     int evaluateBoard(const ChessBitBoard& board) const;
     int quiescence(ChessBitBoard& board, int alpha, int beta, bool maximizing);
 
