@@ -15,13 +15,13 @@ Un jeu d'échecs moderne développé en C++ et Qt, avec génération de coups ba
 - **Interface Glisser-Déposer** - Déplacement fluide des pièces avec retour visuel
 - **Horloges de Jeu** - Pendules d'échecs doubles pour le jeu compétitif
 - **Cache des Coups** - Optimisation des performances pour les calculs répétés
+- **En passant capture**
+- **Roque**
 
 ### 🚧 En Développement
 
-- Roque (petit et grand)
 - Détection de pat
-- Historique des coups et notation
-- Manger en passant
+- Historique des coups fait reste les boutons pour undo redo
 
 ## 🏗️ Architecture
 
@@ -163,9 +163,8 @@ for (chaque coup candidat) {
 
 Les contributions sont les bienvenues ! Domaines prioritaires :
 
-- Implémentation du suivi des droits de roque
 - Ajout de l'algorithme de détection de pat
-- Création d'un historique de coups
+- Création d'un historique de coups fait mais pas encore de bouton pour undo redo
 - Implémentation des conditions de nulle (règle des 50 coups, matériel insuffisant)
 
 ## 👨‍💻 Auteur
