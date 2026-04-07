@@ -42,6 +42,8 @@ private:
     int pstScore        (const ChessBitBoard& board, Color color) const;
     int pawnStructScore (const ChessBitBoard& board, Color color) const;
     int gamePhase       (const ChessBitBoard& board)              const;
+    int unstoppablePawnPenalty(const ChessBitBoard& board, Color color) const;
+
 };
 
 #endif // CHESSAI_H

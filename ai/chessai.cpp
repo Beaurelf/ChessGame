@@ -292,11 +292,100 @@ int ChessAI::pawnStructScore(const ChessBitBoard& board, Color color) const
 
             if (!(oppPawns & aheadMask)) {
                 int advancement = (color == WHITE) ? rank : (7 - rank);
-                score += 50 + advancement * 15;
+
+                // Bonus : la promotion imminente doit dominer l'éval sans ca l'IA ne prend pas la promotion en compte
+                static const int PASSED_BONUS[8] = { 0, 10, 20, 40, 70, 120, 220, 0 };
+                score += PASSED_BONUS[advancement];
             }
         }
     }
     return score;
+}
+
+int ChessAI::unstoppablePawnPenalty(const ChessBitBoard& board, Color color) const
+{
+    Color opp       = (color == WHITE) ? BLACK : WHITE;
+    uint64_t pawns  = board.getPieces(color, PAWN);
+    uint64_t oppKing = board.getPieces(opp, KING);
+    if (!oppKing) return 0;
+
+    int    kingPos  = __builtin_ctzll(oppKing);
+    int    kingRow  = kingPos / 8, kingCol = kingPos % 8;
+    int    penalty  = 0;
+
+    uint64_t allOcc    = board.getOccupancy(2);
+    uint64_t oppRooks  = board.getPieces(opp, ROOK);
+    uint64_t oppQueens = board.getPieces(opp, QUEEN);
+    uint64_t oppAll    = board.getOccupancy(opp == WHITE ? 0 : 1);
+
+    while (pawns) {
+        uint8_t sq  = __builtin_ctzll(pawns);
+        pawns      &= pawns - 1;
+
+        int row = sq / 8, col = sq % 8;
+        int advancement = (color == WHITE) ? row : (7 - row);
+        if (advancement < 4) continue; // Pas encore critique
+
+        int promRow  = (color == WHITE) ? 7 : 0;
+        int pawnDist = std::abs(row - promRow);
+
+        // Vérifier si le chemin est physiquement bloqué
+        uint64_t pathMask = 0;
+        if (color == WHITE) {
+            for (int r = row + 1; r <= promRow; ++r)
+                pathMask |= (1ULL << (r * 8 + col));
+        } else {
+            for (int r = row - 1; r >= promRow; --r)
+                pathMask |= (1ULL << (r * 8 + col));
+        }
+        if (allOcc & pathMask) continue; // Chemin bloqué, pas de bonus
+
+        // 1) Règle du carré : le roi adverse peut-il rattraper ?
+        int kingDist = std::max(std::abs(kingRow - promRow),
+                                std::abs(kingCol - col));
+        if (kingDist <= pawnDist + 1) continue;
+
+        // 2) Tours/Dames sur la même colonne → interception triviale
+        uint64_t fileMask = 0x0101010101010101ULL << col;
+        if ((oppRooks | oppQueens) & fileMask) continue;
+
+        // 3) Toute autre pièce adverse (hors roi) peut-elle intercepter ?
+        //    Pour chaque case du chemin, si la distance de Chebyshev
+        //    d'une pièce ≤ nombre de coups du pion pour y arriver,
+        //    elle peut potentiellement bloquer/capturer.
+        bool canIntercept = false;
+        uint64_t oppPieces = oppAll & ~oppKing;
+        while (oppPieces && !canIntercept) {
+            uint8_t psq = __builtin_ctzll(oppPieces);
+            oppPieces  &= oppPieces - 1;
+
+            int pr = psq / 8, pc = psq % 8;
+
+            if (color == WHITE) {
+                for (int r = row + 1; r <= promRow; ++r) {
+                    int pawnMoves = r - row;
+                    int pieceDist = std::max(std::abs(pr - r), std::abs(pc - col));
+                    if (pieceDist <= pawnMoves) {
+                        canIntercept = true;
+                        break;
+                    }
+                }
+            } else {
+                for (int r = row - 1; r >= promRow; --r) {
+                    int pawnMoves = row - r;
+                    int pieceDist = std::max(std::abs(pr - r), std::abs(pc - col));
+                    if (pieceDist <= pawnMoves) {
+                        canIntercept = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!canIntercept)
+            penalty += 600 + advancement * 50; // Quasi-promotion garantie
+    }
+    return penalty;
 }
 
 // ─────────────────────────────────────────────
@@ -310,6 +399,7 @@ int ChessAI::evaluateBoard(const ChessBitBoard& board) const
     score += (materialScore  (board, m_aiColor) - materialScore  (board, opp)) * 10;
     score += (pstScore       (board, m_aiColor) - pstScore       (board, opp)) * 1;
     score += (pawnStructScore(board, m_aiColor) - pawnStructScore(board, opp)) * 1;
+    score += unstoppablePawnPenalty(board, m_aiColor) - unstoppablePawnPenalty(board, opp);
 
     const int halfmoveClock = board.getHalfmoveClock();
     if (halfmoveClock > 80) {
@@ -317,6 +407,5 @@ int ChessAI::evaluateBoard(const ChessBitBoard& board) const
         if (score > 0) score -= drawPressure;
         else if (score < 0) score += drawPressure / 2;
     }
-
     return score;
 }
