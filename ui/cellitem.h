@@ -14,7 +14,7 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*) override;
 
-    void setHighlight(bool active, bool isCapture = false);
+    void setHighlight(bool active, bool isCapture = false, bool isLastMoveHighlighted = false);
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -24,6 +24,7 @@ private:
     QColor m_color;
     bool m_isHighlighted = false;
     bool m_isCapture = false;
+    bool m_isLastMoveHighlighted = false;
 
 signals:
     void cellPressed(int index);

@@ -139,7 +139,7 @@ void ChessBoard::addPieceToScene(uint8_t index, const PieceType& type, const Col
 void ChessBoard::clearOldHighlights() {
     for (uint8_t pos : m_highlightedCellPositions) {
         if (m_cells[pos]) {
-            m_cells[pos]->setHighlight(false, false);
+            m_cells[pos]->setHighlight(false);
         }
     }
     m_highlightedCellPositions.clear();
@@ -170,7 +170,7 @@ void ChessBoard::onPiecePressed(uint8_t clickedPos){
     auto captureMovePos = UIHelper::getLegalMovePositions(moveMasks.captureMoves);
 
     for(auto pos: quietMovePos){
-        m_cells[pos]->setHighlight(true, false);
+        m_cells[pos]->setHighlight(true);
         m_highlightedCellPositions.push_back(pos);
     }
 
@@ -194,6 +194,18 @@ void ChessBoard::onMoveExecuted(uint8_t from, uint8_t to){
         m_pieceItems[to]->moveToCell(to);
     }
     m_pieceItems[from] = nullptr;
+    // Mettre en surbrillance le déplacement
+    for(auto& pos: m_lastMovePostions){
+        m_cells[pos]->setHighlight(false);
+    }
+    m_lastMovePostions.clear();
+    m_lastMovePostions.insert(to);
+    m_lastMovePostions.insert(from);
+
+    for(auto& pos: m_lastMovePostions){
+        m_cells[pos]->setHighlight(true, false, true);
+    }
+
     if(m_isTimer1Active){
         m_timer1->stop();
         m_timer2->resume();

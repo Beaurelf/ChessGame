@@ -19,9 +19,10 @@ QRectF CellItem::boundingRect() const {
     return QRectF(0, 0, UIConsts::BOARD_TILE_SIZE, UIConsts::BOARD_TILE_SIZE);
 }
 
-void CellItem::setHighlight(bool active, bool isCapture) {
+void CellItem::setHighlight(bool active, bool isCapture, bool isLastMoveHighlighted) {
     m_isHighlighted = active;
     m_isCapture = isCapture;
+    m_isLastMoveHighlighted = isLastMoveHighlighted;
     update();
 }
 
@@ -34,9 +35,10 @@ void CellItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* option, 
     painter->fillRect(rec, m_color);
 
     if (!m_isHighlighted) return;
-    if (m_isCapture) {
-        // Style pour une capture : on recouvre d'une couleur spécifique (Beige)
-        QColor captureColor(UIConsts::COLOR_RED);
+    if (m_isCapture || m_isLastMoveHighlighted) {
+        // Style pour une capture ou last move : on recouvre d'une couleur spécifique (rouge ou beige)
+        QString color = m_isCapture ? UIConsts::COLOR_RED : UIConsts::COLOR_BEIGE;
+        QColor captureColor(color);
         captureColor.setAlpha(150);
         painter->fillRect(rec, captureColor);
     } else {

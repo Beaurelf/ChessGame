@@ -40,6 +40,7 @@ private:
     array<unique_ptr<CellItem>, UIConsts::NB_CELLS> m_cells;
     unordered_map<uint8_t, unique_ptr<PieceItem>> m_pieceItems;
     vector<uint8_t> m_highlightedCellPositions;
+    set<uint8_t> m_lastMovePostions;
     set<uint8_t> m_capturedCellPositions;
     bool m_machine; // true si le joueur joue contre la machine
     unordered_map<uint8_t, MoveMasks> m_legalMovesCache;
