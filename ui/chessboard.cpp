@@ -57,6 +57,7 @@ void ChessBoard::setup()
     });
     connect(m_chessController.get(), &ChessController::moveExecuted, this, &ChessBoard::onMoveExecuted);
     connect(m_chessController.get(), &ChessController::castleRookMoved, this, &ChessBoard::onCastleRookMoved);
+    connect(m_chessController.get(), &ChessController::enPassantCapturePerformed, this, &ChessBoard::onEnPassantCapturePerformed);
     connect(m_chessController.get(), &ChessController::pieceCaptured, this, &ChessBoard::onPieceCaptured);
     connect(m_chessController.get(), &ChessController::checkMateDetected, this, &ChessBoard::onCheckMateDetected);
     connect(m_chessController.get(), &ChessController::promotionDetected, this, &ChessBoard::onPromotionDetected);
@@ -217,6 +218,13 @@ void ChessBoard::onCastleRookMoved(uint8_t rookFrom, uint8_t rookTo) {
         m_pieceItems[rookTo]->moveToCell(rookTo);
     }
     m_pieceItems[rookFrom] = nullptr;
+}
+
+void ChessBoard::onEnPassantCapturePerformed(uint8_t capturedPos) {
+    if (m_pieceItems[capturedPos]) {
+        m_scene->removeItem(m_pieceItems[capturedPos].get());
+        m_pieceItems[capturedPos].reset();
+    }
 }
 
 void ChessBoard::onPieceCaptured(const PieceType& type, const Color& color) {

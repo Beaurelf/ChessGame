@@ -14,6 +14,9 @@ struct UndoInfo {
     Color movedColor;
     Color capturedColor;
     uint8_t castlingRights;
+    uint8_t previousEnPassantSquare;
+    uint8_t enPassantCaptureSquare;
+    bool isEnPassantCapture;
 };
 
 class ChessBitBoard
@@ -23,10 +26,14 @@ public:
     static constexpr uint8_t CASTLE_WQ = 0x02;
     static constexpr uint8_t CASTLE_BK = 0x04;
     static constexpr uint8_t CASTLE_BQ = 0x08;
+    static constexpr uint8_t NO_EN_PASSANT = 0xFF;
 
     ChessBitBoard();
 
     uint8_t getCastlingRights() const;
+    uint8_t getEnPassantTarget() const;
+    bool isEnPassantMove(uint8_t from, uint8_t to) const;
+    uint8_t getEnPassantCaptureSquare(uint8_t to, Color movingColor) const;
     PieceType getPieceType(uint8_t pos) const;
     uint64_t getPieces(const Color& color, const PieceType& type) const;
     Color getPieceColor(uint8_t pos) const;
@@ -44,6 +51,7 @@ private:
     // [0]=White, [1]=Black, [2]=Both
     uint64_t m_occupancies[3];
     uint8_t m_castlingRights;
+    uint8_t m_enPassantTarget;
     std::vector<UndoInfo> m_undoStack;
     void setupDefaultBoardPieces();
     void updateOccupancies();

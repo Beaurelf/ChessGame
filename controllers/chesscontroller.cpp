@@ -122,21 +122,33 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
     PieceType capturedType = m_bitBoard.getPieceType(to);
     PieceType movingType = m_bitBoard.getPieceType(from);
     Color capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
+    bool isEnPassantCapture = m_bitBoard.isEnPassantMove(from, to);
+    uint8_t enPassantCaptureSquare = ChessBitBoard::NO_EN_PASSANT;
 
-    // Détecter le roque avant update()
+    if (isEnPassantCapture) {
+        capturedType = PAWN;
+        enPassantCaptureSquare = m_bitBoard.getEnPassantCaptureSquare(to, m_currentPlayer);
+    }
+
+    // Detect castling before update()
     uint8_t dist = (from > to) ? (from - to) : (to - from);
     bool castling = (movingType == KING && dist == 2);
 
     m_bitBoard.update(from, to);
     emit moveExecuted(from, to);
+    if (isEnPassantCapture) {
+        emit enPassantCapturePerformed(enPassantCaptureSquare);
+    }
 
-    // Roque : signaler le déplacement de la tour pour l'UI
+    // Castling: notify the UI rook move
     if (castling) {
         uint8_t rookFrom, rookTo;
-        if (to > from) { // Petit roque
+        if (to > from) { 
+            // Petit roque
             rookFrom = (m_currentPlayer == WHITE) ? 7 : 63;
             rookTo   = (m_currentPlayer == WHITE) ? 5 : 61;
-        } else { // Grand roque
+        } else { 
+            // Grand roque
             rookFrom = (m_currentPlayer == WHITE) ? 0 : 56;
             rookTo   = (m_currentPlayer == WHITE) ? 3 : 59;
         }
@@ -202,15 +214,25 @@ void ChessController::onAiMoveReady()
     PieceType capturedType = m_bitBoard.getPieceType(move.to);
     Color     capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
     PieceType movingType    = m_bitBoard.getPieceType(move.from);
+    bool isEnPassantCapture    = m_bitBoard.isEnPassantMove(move.from, move.to);
+    uint8_t enPassantCaptureSquare = ChessBitBoard::NO_EN_PASSANT;
 
-    // Détecter le roque avant update()
+    if (isEnPassantCapture) {
+        capturedType = PAWN;
+        enPassantCaptureSquare = m_bitBoard.getEnPassantCaptureSquare(move.to, m_currentPlayer);
+    }
+
+    // Detect castling before update()
     uint8_t dist = (move.from > move.to) ? (move.from - move.to) : (move.to - move.from);
     bool castling = (movingType == KING && dist == 2);
 
     m_bitBoard.update(move.from, move.to);
     emit moveExecuted(move.from, move.to);
+    if (isEnPassantCapture) {
+        emit enPassantCapturePerformed(enPassantCaptureSquare);
+    }
 
-    // Roque : signaler le déplacement de la tour pour l'UI
+    // Castling: notify the UI rook move
     if (castling) {
         uint8_t rookFrom, rookTo;
         if (move.to > move.from) { // Petit roque

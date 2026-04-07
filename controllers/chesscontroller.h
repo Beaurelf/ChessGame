@@ -25,6 +25,7 @@ public slots:
 signals:
     void moveExecuted(uint8_t from, uint8_t to);
     void castleRookMoved(uint8_t rookFrom, uint8_t rookTo);
+    void enPassantCapturePerformed(uint8_t capturedPos);
     void pieceCaptured(PieceType type, const Color& color);
     void checkMateDetected(const Color& color);
     void promotionDetected(uint8_t pos);

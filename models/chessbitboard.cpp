@@ -2,6 +2,7 @@
 
 ChessBitBoard::ChessBitBoard() {
     m_castlingRights = CASTLE_WK | CASTLE_WQ | CASTLE_BK | CASTLE_BQ;
+    m_enPassantTarget = NO_EN_PASSANT;
     setupDefaultBoardPieces();
 }
 
@@ -9,37 +10,83 @@ uint8_t ChessBitBoard::getCastlingRights() const {
     return m_castlingRights;
 }
 
+uint8_t ChessBitBoard::getEnPassantTarget() const {
+    return m_enPassantTarget;
+}
+
+bool ChessBitBoard::isEnPassantMove(uint8_t from, uint8_t to) const
+{
+    if (m_enPassantTarget == NO_EN_PASSANT || to != m_enPassantTarget) return false;
+    if (getPieceType(from) != PAWN || getPieceType(to) != NONE) return false;
+
+    int fileDelta = static_cast<int>(to % 8) - static_cast<int>(from % 8);
+    return (fileDelta == 1 || fileDelta == -1);
+}
+
+uint8_t ChessBitBoard::getEnPassantCaptureSquare(uint8_t to, Color movingColor) const
+{
+    return (movingColor == WHITE)
+               ? static_cast<uint8_t>(to - 8)
+               : static_cast<uint8_t>(to + 8);
+}
+
 void ChessBitBoard::update(uint8_t from, uint8_t to)
 {
-    Color movingColor   = getPieceColor(from);
+    Color movingColor    = getPieceColor(from);
     PieceType movingType = getPieceType(from);
-    Color enemyColor    = (movingColor == WHITE) ? BLACK : WHITE;
-    PieceType capturedType = getPieceType(to);
+    Color enemyColor     = (movingColor == WHITE) ? BLACK : WHITE;
 
-    // Empiler l'état AVANT le mouvement
+    uint8_t previousEnPassantSquare = m_enPassantTarget;
+    bool isEnPassantCapture         = isEnPassantMove(from, to);
+    uint8_t enPassantCaptureSquare  = NO_EN_PASSANT;
+    PieceType capturedType          = getPieceType(to);
+    Color capturedColor             = (capturedType != NONE || isEnPassantCapture) ? enemyColor : NO_COLOR;
+
+    if (isEnPassantCapture) {
+        capturedType = PAWN;
+        enPassantCaptureSquare = getEnPassantCaptureSquare(to, movingColor);
+    }
+
+    // Save the state before the move
     m_undoStack.push_back({
         from, to,
-        movingType, capturedType , NONE,
-        movingColor, enemyColor,
-        m_castlingRights
+        movingType, capturedType, NONE,
+        movingColor, capturedColor,
+        m_castlingRights,
+        previousEnPassantSquare,
+        enPassantCaptureSquare,
+        isEnPassantCapture
     });
 
-    if (capturedType != NONE)
-        m_pieces[enemyColor][capturedType] &= ~(1ULL << to);
+    m_enPassantTarget = NO_EN_PASSANT;
+
+    if (capturedType != NONE) {
+        uint8_t captureSquare = isEnPassantCapture ? enPassantCaptureSquare : to;
+        m_pieces[enemyColor][capturedType] &= ~(1ULL << captureSquare);
+    }
 
     uint64_t moveMask = (1ULL << from) | (1ULL << to);
     m_pieces[movingColor][movingType] ^= moveMask;
 
-    // Roque : déplacer la tour
+    if (movingType == PAWN) {
+        uint8_t distance = (from > to) ? (from - to) : (to - from);
+        if (distance == 16) {
+            m_enPassantTarget = (movingColor == WHITE)
+                                    ? static_cast<uint8_t>(from + 8)
+                                    : static_cast<uint8_t>(from - 8);
+        }
+    }
+
+    // Castling: move the rook
     uint8_t distance = (from > to) ? (from - to) : (to - from);
     if (movingType == KING && distance == 2) {
         uint8_t rookFrom, rookTo;
         if (to > from) {
-            // Petit roque (kingside)
+            // Kingside castling
             rookFrom = (movingColor == WHITE) ? 7 : 63;
             rookTo   = (movingColor == WHITE) ? 5 : 61;
         } else {
-            // Grand roque (queenside)
+            // Queenside castling
             rookFrom = (movingColor == WHITE) ? 0 : 56;
             rookTo   = (movingColor == WHITE) ? 3 : 59;
         }
@@ -47,7 +94,7 @@ void ChessBitBoard::update(uint8_t from, uint8_t to)
         m_pieces[movingColor][ROOK] ^= rookMask;
     }
 
-    // --- Mise à jour des droits de roque ---
+    // Update castling rights
     if (movingType == KING) {
         if (movingColor == WHITE) m_castlingRights &= ~(CASTLE_WK | CASTLE_WQ);
         else m_castlingRights &= ~(CASTLE_BK | CASTLE_BQ);
@@ -58,7 +105,7 @@ void ChessBitBoard::update(uint8_t from, uint8_t to)
         if (from == 56) m_castlingRights &= ~CASTLE_BQ;
         if (from == 63) m_castlingRights &= ~CASTLE_BK;
     }
-    // Tour capturée
+    // Captured rook
     if (to == 0)  m_castlingRights &= ~CASTLE_WQ;
     if (to == 7)  m_castlingRights &= ~CASTLE_WK;
     if (to == 56) m_castlingRights &= ~CASTLE_BQ;
@@ -86,8 +133,9 @@ void ChessBitBoard::undo()
     UndoInfo info = m_undoStack.back();
     m_undoStack.pop_back();
 
-    // Restaurer les droits de roque
+    // Restore special-move state
     m_castlingRights = info.castlingRights;
+    m_enPassantTarget = info.previousEnPassantSquare;
 
     if (info.promotedTo != NONE) {
         // Retirer la pièce promue
@@ -99,16 +147,16 @@ void ChessBitBoard::undo()
         m_pieces[info.movedColor][info.movedType] ^= moveMask;
     }
 
-    // Roque : restaurer la tour
+    // Castling: restore the rook
     uint8_t distance = (info.from > info.to) ? (info.from - info.to) : (info.to - info.from);
     if (info.movedType == KING && distance == 2) {
         uint8_t rookFrom, rookTo;
         if (info.to > info.from) {
-            // Petit roque
+            // Kingside castling
             rookFrom = (info.movedColor == WHITE) ? 7 : 63;
             rookTo   = (info.movedColor == WHITE) ? 5 : 61;
         } else {
-            // Grand roque
+            // Queenside castling
             rookFrom = (info.movedColor == WHITE) ? 0 : 56;
             rookTo   = (info.movedColor == WHITE) ? 3 : 59;
         }
@@ -116,8 +164,10 @@ void ChessBitBoard::undo()
         m_pieces[info.movedColor][ROOK] ^= rookMask;
     }
 
-    if (info.capturedType != NONE)
-        m_pieces[info.capturedColor][info.capturedType] |= (1ULL << info.to);
+    if (info.capturedType != NONE) {
+        uint8_t captureSquare = info.isEnPassantCapture ? info.enPassantCaptureSquare : info.to;
+        m_pieces[info.capturedColor][info.capturedType] |= (1ULL << captureSquare);
+    }
 
     updateOccupancies();
 }

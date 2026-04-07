@@ -146,9 +146,17 @@ MoveMasks MoveController::getPawnMoves(uint8_t pos, const ChessBitBoard& board, 
         forwardMoves &= ~step2;  // retirer le double pas si step1 bloqué
     }
 
-    // Attaques : uniquement cases ennemies
+    // Captures: enemy pieces + en passant
     result.quietMoves   = forwardMoves;
     result.captureMoves = attackMask & enemyPieces;
+
+    uint8_t enPassantTarget = board.getEnPassantTarget();
+    if (enPassantTarget != ChessBitBoard::NO_EN_PASSANT) {
+        uint64_t enPassantMask = (1ULL << enPassantTarget);
+        if (attackMask & enPassantMask) {
+            result.captureMoves |= enPassantMask;
+        }
+    }
 
     return result;
 }
