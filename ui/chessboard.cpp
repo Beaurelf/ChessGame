@@ -174,6 +174,10 @@ void ChessBoard::onPiecePressed(uint8_t clickedPos){
         m_highlightedCellPositions.push_back(pos);
     }
 
+    for(auto& pos: m_lastMovePostions){
+        m_cells[pos]->setHighlight(true, false, true);
+    }
+
     for(auto pos: captureMovePos){
         m_cells[pos]->setHighlight(true, true);
         m_highlightedCellPositions.push_back(pos);
@@ -249,50 +253,31 @@ void ChessBoard::onPieceCaptured(const PieceType& type, const Color& color) {
 
 void ChessBoard::onCheckMateDetected(const Color& loserColor)
 {
-    m_timer1->stop();
-    m_timer2->stop();
     QString winnerName = (loserColor == BLACK) ? "Blanc" : "Noir";
+    QString message = QString("Le joueur %1 a remporté la partie !\nQue voulez-vous faire ?").arg(winnerName);
 
-    QDialog dialog(this);
-    dialog.setWindowTitle("Échec et Mat");
-
-    QVBoxLayout* layout = new QVBoxLayout(&dialog);
-    QHBoxLayout* btnGroup = new QHBoxLayout();
-
-    QLabel* label = new QLabel(QString("Le joueur %1 a remporté la partie !\nQue voulez-vous faire ?").arg(winnerName));
-    label->setAlignment(Qt::AlignCenter);
-
-    QPushButton* btnRestart = new QPushButton("Nouvelle partie");
-    QPushButton* btnMenu = new QPushButton("Menu principal");
-
-    connect(btnRestart, &QPushButton::clicked, &dialog, &QDialog::accept);
-    connect(btnMenu, &QPushButton::clicked, &dialog, &QDialog::reject);
-
-    btnGroup->addWidget(btnRestart);
-    btnGroup->addWidget(btnMenu);
-
-    layout->addWidget(label);
-    layout->addLayout(btnGroup);
-
-    if (dialog.exec() == QDialog::Accepted) {
-        emit restart();
-    } else {
-        emit goToHome();
-    }
+    showEndGameDialog("Échec et Mat", message);
 }
 
 void ChessBoard::onDrawDetected(const QString& reason)
+{
+    QString message = QString("La partie est nulle.\nRaison : %1\n\nQue voulez-vous faire ?").arg(reason);
+
+    showEndGameDialog("Partie nulle", message);
+}
+
+void ChessBoard::showEndGameDialog(const QString& title, const QString& message)
 {
     m_timer1->stop();
     m_timer2->stop();
 
     QDialog dialog(this);
-    dialog.setWindowTitle("Partie nulle");
+    dialog.setWindowTitle(title);
 
     QVBoxLayout* layout = new QVBoxLayout(&dialog);
     QHBoxLayout* btnGroup = new QHBoxLayout();
 
-    QLabel* label = new QLabel(QString("La partie est nulle.\nRaison : %1\n\nQue voulez-vous faire ?").arg(reason));
+    QLabel* label = new QLabel(message);
     label->setAlignment(Qt::AlignCenter);
     label->setWordWrap(true);
 

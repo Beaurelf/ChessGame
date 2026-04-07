@@ -52,6 +52,8 @@ private:
     void addPieceToScene(uint8_t index, const PieceType& type, const Color&  color);
     void setupUi();
     void setup();
+    void showEndGameDialog(const QString& title, const QString& message);
+
 
 public:
     ChessBoard(bool machine, QMainWindow *parent = nullptr);
