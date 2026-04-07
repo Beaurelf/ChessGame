@@ -11,7 +11,7 @@ ChessAI::ChessAI(int depth, Color aiColor) : m_depth(depth), m_aiColor(aiColor) 
 // ─────────────────────────────────────────────
 // MINIMAX + ALPHA-BETA
 // ─────────────────────────────────────────────
-ChessAI::MinimaxResult ChessAI::minimax(const ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing)
+ChessAI::MinimaxResult ChessAI::minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing)
 {
     Color currentColor = maximizing ? m_aiColor : (m_aiColor == WHITE ? BLACK : WHITE);
     uint64_t hash      = m_zobrist.hash(board, currentColor);
@@ -63,10 +63,9 @@ ChessAI::MinimaxResult ChessAI::minimax(const ChessBitBoard& board, int depth, i
     if (maximizing) {
         best.score = std::numeric_limits<int>::min();
         for (const AIHelper::Move& move : moves) {
-            ChessBitBoard copy = board;
-            copy.update(move.from, move.to);
-
-            int score = minimax(copy, depth - 1, alpha, beta, false).score;
+            board.update(move.from, move.to);
+            int score = minimax(board, depth - 1, alpha, beta, false).score;
+            board.undo();
             if (score > best.score) {
                 best.score    = score;
                 best.bestMove = move;
@@ -78,10 +77,9 @@ ChessAI::MinimaxResult ChessAI::minimax(const ChessBitBoard& board, int depth, i
     } else {
         best.score = std::numeric_limits<int>::max();
         for (const AIHelper::Move& move : moves) {
-            ChessBitBoard copy = board;
-            copy.update(move.from, move.to);
-
-            int score = minimax(copy, depth - 1, alpha, beta, true).score;
+            board.update(move.from, move.to);
+            int score = minimax(board, depth - 1, alpha, beta, true).score;
+            board.undo();
             if (score < best.score) {
                 best.score    = score;
                 best.bestMove = move;
@@ -101,7 +99,7 @@ ChessAI::MinimaxResult ChessAI::minimax(const ChessBitBoard& board, int depth, i
 // ─────────────────────────────────────────────
 // GET BEST MOVE — point d'entrée public
 // ─────────────────────────────────────────────
-AIHelper::Move ChessAI::getBestMove(const ChessBitBoard& board)
+AIHelper::Move ChessAI::getBestMove(ChessBitBoard& board)
 {
     AIHelper::Move bestMove = {255, 255};
     for (int d = 1; d <= m_depth; d++) {
@@ -120,7 +118,7 @@ AIHelper::Move ChessAI::getBestMove(const ChessBitBoard& board)
 // ─────────────────────────────────────────────
 // QUIESCENCE
 // ─────────────────────────────────────────────
-int ChessAI::quiescence(const ChessBitBoard& board, int alpha, int beta, bool maximizing)
+int ChessAI::quiescence(ChessBitBoard& board, int alpha, int beta, bool maximizing)
 {
     int standPat = evaluateBoard(board);
 
@@ -153,11 +151,10 @@ int ChessAI::quiescence(const ChessBitBoard& board, int alpha, int beta, bool ma
     for (const AIHelper::Move& move : moves) {
         if (board.getPieceType(move.to) == NONE) continue; // captures seulement
 
-        ChessBitBoard copy = board;
-        copy.update(move.from, move.to);
+        board.update(move.from, move.to);
 
-        int score = quiescence(copy, alpha, beta, !maximizing);
-
+        int score = quiescence(board, alpha, beta, !maximizing);
+        board.undo();
         if (maximizing) {
             alpha = std::max(alpha, score);
             if (alpha >= beta) return beta;

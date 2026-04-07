@@ -15,7 +15,7 @@ public:
     ChessController(bool machine, QObject *parent = nullptr);
     PieceType getPieceType(uint8_t pos) const;
     Color getPieceColor(uint8_t pos) const;
-    MoveMasks getCurrentPlayerLegalMoves(uint8_t from) const ;
+    MoveMasks getCurrentPlayerLegalMoves(uint8_t from);
 
 public slots:
     void onMoveRequested(uint8_t from, uint8_t to);
@@ -24,6 +24,7 @@ public slots:
 
 signals:
     void moveExecuted(uint8_t from, uint8_t to);
+    void castleRookMoved(uint8_t rookFrom, uint8_t rookTo);
     void pieceCaptured(PieceType type, const Color& color);
     void checkMateDetected(const Color& color);
     void promotionDetected(uint8_t pos);
@@ -45,10 +46,10 @@ private:
      * @return true si la case contient une pièce de la couleur demandée.
      */
     bool isCurrentPlayerPiece(uint8_t pos) const;
-    MoveMasks getLegalMoves(uint8_t pos) const;
-    bool isValidMove(uint8_t from, uint8_t to) const;
-    bool isKingInCheck(Color color, const ChessBitBoard& board) const;
-    bool isCheckmate(Color color, const ChessBitBoard& board) const;
+    MoveMasks getLegalMoves(uint8_t pos);
+    bool isValidMove(uint8_t from, uint8_t to);
+    bool isKingInCheck(Color color, const ChessBitBoard& board) const ;
+    bool isCheckmate(Color color, const ChessBitBoard& board);
     void endTurn();
     void handleAiTurnIfNeeded();
 };

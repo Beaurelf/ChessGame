@@ -66,6 +66,7 @@ public slots:
     void onPiecePressed(uint8_t clickedPos);
     void onMoveRequested(uint8_t to);
     void onMoveExecuted(uint8_t from, uint8_t to);
+    void onCastleRookMoved(uint8_t rookFrom, uint8_t rookTo);
     void onPieceCaptured(const PieceType& type, const Color& color);
     void onCheckMateDetected(const Color& color);
     void onPromotionDetected(uint8_t pos);

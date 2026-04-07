@@ -30,7 +30,7 @@ inline int pstLookup(PieceType p, uint8_t pos, bool isEndgame) {
     }
 }
 
-std::vector<Move> generateAllMoves(const ChessBitBoard& board, Color color);
+std::vector<Move> generateAllMoves(ChessBitBoard& board, Color color);
 }
 
 #endif // HELPER_H

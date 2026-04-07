@@ -21,7 +21,7 @@ Color ChessController::getPieceColor(uint8_t pos) const
     return m_bitBoard.getPieceColor(pos);
 }
 
-MoveMasks ChessController::getLegalMoves(uint8_t from) const {
+MoveMasks ChessController::getLegalMoves(uint8_t from) {
     MoveMasks finalMoves = {};
 
     // Récupérer les coups "Pseudo-Légaux" (Géométrie + Obstacles)
@@ -36,14 +36,14 @@ MoveMasks ChessController::getLegalMoves(uint8_t from) const {
             uint8_t to = __builtin_ctzll(mask);
 
             // --- SIMULATION ---
-            // On crée une copie temporaire du plateau
-            ChessBitBoard boardCopy = m_bitBoard;
             // On joue le coup sur la copie
-            boardCopy.update(from, to);
+            m_bitBoard.update(from, to);
             // Si mon Roi survit sur ce plateau simulé, le coup est valide
-            if (!isKingInCheck(m_currentPlayer, boardCopy)) {
+            if (!isKingInCheck(m_currentPlayer, m_bitBoard)) {
                 validMask |= (1ULL << to);
             }
+            // on fait un undo
+            m_bitBoard.undo();
             // On supprime le bit traité pour passer au suivant
             mask &= (mask - 1);
         }
@@ -55,12 +55,12 @@ MoveMasks ChessController::getLegalMoves(uint8_t from) const {
     return finalMoves;
 }
 
-MoveMasks ChessController::getCurrentPlayerLegalMoves(uint8_t from) const {
+MoveMasks ChessController::getCurrentPlayerLegalMoves(uint8_t from) {
     if (m_isAiTurn || !isCurrentPlayerPiece(from)) return {};
     return getLegalMoves(from);
 }
 
-bool ChessController::isValidMove(uint8_t from, uint8_t to) const
+bool ChessController::isValidMove(uint8_t from, uint8_t to)
 {
     MoveMasks moveMasks = getLegalMoves(from);
     return ((1ULL << to) & (moveMasks.quietMoves | moveMasks.captureMoves)) != 0;
@@ -78,7 +78,7 @@ bool ChessController::isKingInCheck(Color color, const ChessBitBoard& board) con
     return (enemyMoves.captureMoves & (1ULL << myKingPos)) != 0;
 }
 
-bool ChessController::isCheckmate(Color color, const ChessBitBoard& board) const {
+bool ChessController::isCheckmate(Color color, const ChessBitBoard& board) {
     if (!isKingInCheck(color, board)) {
         return false;
     }
@@ -123,8 +123,26 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
     PieceType movingType = m_bitBoard.getPieceType(from);
     Color capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
 
+    // Détecter le roque avant update()
+    uint8_t dist = (from > to) ? (from - to) : (to - from);
+    bool castling = (movingType == KING && dist == 2);
+
     m_bitBoard.update(from, to);
     emit moveExecuted(from, to);
+
+    // Roque : signaler le déplacement de la tour pour l'UI
+    if (castling) {
+        uint8_t rookFrom, rookTo;
+        if (to > from) { // Petit roque
+            rookFrom = (m_currentPlayer == WHITE) ? 7 : 63;
+            rookTo   = (m_currentPlayer == WHITE) ? 5 : 61;
+        } else { // Grand roque
+            rookFrom = (m_currentPlayer == WHITE) ? 0 : 56;
+            rookTo   = (m_currentPlayer == WHITE) ? 3 : 59;
+        }
+        emit castleRookMoved(rookFrom, rookTo);
+    }
+
     if (capturedType != PieceType::NONE) {
         emit pieceCaptured(capturedType, capturedColor);
     }
@@ -145,6 +163,8 @@ void ChessController::onMoveRequested(uint8_t from, uint8_t to)
         emit checkMateDetected(m_currentPlayer);
     } else if (isKingInCheck(m_currentPlayer, m_bitBoard)) {
         m_soundController.playSound(SoundType::CHECK);
+    } else if (castling) {
+        m_soundController.playSound(SoundType::CASTLE);
     } else if (capturedType != PieceType::NONE) {
         m_soundController.playSound(SoundType::CAPTURE);
     } else {
@@ -183,8 +203,25 @@ void ChessController::onAiMoveReady()
     Color     capturedColor = (m_currentPlayer == WHITE) ? BLACK : WHITE;
     PieceType movingType    = m_bitBoard.getPieceType(move.from);
 
+    // Détecter le roque avant update()
+    uint8_t dist = (move.from > move.to) ? (move.from - move.to) : (move.to - move.from);
+    bool castling = (movingType == KING && dist == 2);
+
     m_bitBoard.update(move.from, move.to);
     emit moveExecuted(move.from, move.to);
+
+    // Roque : signaler le déplacement de la tour pour l'UI
+    if (castling) {
+        uint8_t rookFrom, rookTo;
+        if (move.to > move.from) { // Petit roque
+            rookFrom = (m_currentPlayer == WHITE) ? 7 : 63;
+            rookTo   = (m_currentPlayer == WHITE) ? 5 : 61;
+        } else { // Grand roque
+            rookFrom = (m_currentPlayer == WHITE) ? 0 : 56;
+            rookTo   = (m_currentPlayer == WHITE) ? 3 : 59;
+        }
+        emit castleRookMoved(rookFrom, rookTo);
+    }
 
     if (capturedType != PieceType::NONE)
         emit pieceCaptured(capturedType, capturedColor);
@@ -206,6 +243,8 @@ void ChessController::onAiMoveReady()
         emit checkMateDetected(m_currentPlayer);
     } else if (isKingInCheck(m_currentPlayer, m_bitBoard)) {
         m_soundController.playSound(SoundType::CHECK);
+    } else if (castling) {
+        m_soundController.playSound(SoundType::CASTLE);
     } else if (capturedType != PieceType::NONE) {
         m_soundController.playSound(SoundType::CAPTURE);
     } else if (isWhitePromo || isBlackPromo) {

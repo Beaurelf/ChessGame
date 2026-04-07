@@ -22,6 +22,7 @@ private:
     MoveGenerator m_generator;
     MoveMasks getPawnMoves(uint8_t pos, const ChessBitBoard& board, Color color) const;
     MoveMasks getStandardMoves(uint8_t pos, const ChessBitBoard& board, PieceType type, Color color) const;
+    bool isCellAttacked(uint8_t square, Color attackerColor, const ChessBitBoard& board) const;
 
 };
 

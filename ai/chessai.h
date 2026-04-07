@@ -11,7 +11,7 @@ class ChessAI
 {
 public:
     explicit ChessAI(int depth, Color aiColor);
-    AIHelper::Move getBestMove(const ChessBitBoard& board);
+    AIHelper::Move getBestMove(ChessBitBoard& board);
 
 private:
     struct MinimaxResult {
@@ -27,10 +27,10 @@ private:
     // ─────────────────────────────────────────────
     // MINIMAX + ALPHA-BETA
     // ─────────────────────────────────────────────
-    MinimaxResult minimax(const ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing);
+    MinimaxResult minimax(ChessBitBoard& board, int depth, int alpha, int beta, bool maximizing);
 
     int evaluateBoard(const ChessBitBoard& board) const;
-    int quiescence(const ChessBitBoard& board, int alpha, int beta, bool maximizing);
+    int quiescence(ChessBitBoard& board, int alpha, int beta, bool maximizing);
 
     // — Composantes de l'évaluation —
     int materialScore   (const ChessBitBoard& board, Color color) const;

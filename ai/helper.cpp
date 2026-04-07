@@ -3,7 +3,7 @@
 
 namespace AIHelper {
 
-std::vector<Move> generateAllMoves(const ChessBitBoard& board, Color color)
+std::vector<Move> generateAllMoves(ChessBitBoard& board, Color color)
 {
     std::vector<Move> captures;
     std::vector<Move> quiets;
@@ -24,16 +24,16 @@ std::vector<Move> generateAllMoves(const ChessBitBoard& board, Color color)
                 uint8_t to = __builtin_ctzll(mask);
                 mask &= mask - 1;
 
-                ChessBitBoard copy = board;
-                copy.update(from, to);
+                board.update(from, to);
 
                 // Vérifier que le roi de la couleur courante n'est pas en échec
                 Color enemyColor = (color == WHITE) ? BLACK : WHITE;
-                uint8_t kingPos  = copy.getKingPosition(color);
-                MoveMasks enemyMoves = mc.getAllLegalMoves(enemyColor, copy);
+                uint8_t kingPos  = board.getKingPosition(color);
+                MoveMasks enemyMoves = mc.getAllLegalMoves(enemyColor, board);
 
                 if (!(enemyMoves.captureMoves & (1ULL << kingPos)))
                     valid |= (1ULL << to);
+                board.undo();
             }
             return valid;
         };

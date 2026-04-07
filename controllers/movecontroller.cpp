@@ -43,7 +43,83 @@ MoveMasks MoveController::getStandardMoves(uint8_t pos, const ChessBitBoard& boa
     result.captureMoves    = validMoves & enemyPieces;
     result.quietMoves      = validMoves & ~allOccupancy;
 
+    // --- Roque ---
+    if (type == KING) {
+        Color enemyColor = (color == WHITE) ? BLACK : WHITE;
+        uint8_t rights = board.getCastlingRights();
+
+        if (color == WHITE) {
+            // Petit roque : e1(4) → g1(6), tour h1(7) → f1(5)
+            if ((rights & ChessBitBoard::CASTLE_WK)
+                && !(allOccupancy & ((1ULL << 5) | (1ULL << 6)))
+                && !isCellAttacked(4, enemyColor, board)
+                && !isCellAttacked(5, enemyColor, board))
+            {
+                result.quietMoves |= (1ULL << 6);
+            }
+            // Grand roque : e1(4) → c1(2), tour a1(0) → d1(3)
+            if ((rights & ChessBitBoard::CASTLE_WQ)
+                && !(allOccupancy & ((1ULL << 1) | (1ULL << 2) | (1ULL << 3)))
+                && !isCellAttacked(4, enemyColor, board)
+                && !isCellAttacked(3, enemyColor, board))
+            {
+                result.quietMoves |= (1ULL << 2);
+            }
+        } else {
+            // Petit roque : e8(60) → g8(62), tour h8(63) → f8(61)
+            if ((rights & ChessBitBoard::CASTLE_BK)
+                && !(allOccupancy & ((1ULL << 61) | (1ULL << 62)))
+                && !isCellAttacked(60, enemyColor, board)
+                && !isCellAttacked(61, enemyColor, board))
+            {
+                result.quietMoves |= (1ULL << 62);
+            }
+            // Grand roque : e8(60) → c8(58), tour a8(56) → d8(59)
+            if ((rights & ChessBitBoard::CASTLE_BQ)
+                && !(allOccupancy & ((1ULL << 57) | (1ULL << 58) | (1ULL << 59)))
+                && !isCellAttacked(60, enemyColor, board)
+                && !isCellAttacked(59, enemyColor, board))
+            {
+                result.quietMoves |= (1ULL << 58);
+            }
+        }
+    }
+
     return result;
+}
+
+bool MoveController::isCellAttacked(uint8_t square, Color attackerColor, const ChessBitBoard& board) const {
+    uint64_t allOccupancy = board.getOccupancy(2);
+
+    // Vérifier les pièces non-pion via génération brute (pas de roque)
+    for (PieceType type : {KING, QUEEN, ROOK, BISHOP, KNIGHT}) {
+        uint64_t pieces = board.getPieces(attackerColor, type);
+        while (pieces) {
+            uint8_t pos = __builtin_ctzll(pieces);
+            pieces &= pieces - 1;
+            uint64_t attacks = m_generator.getPossibleMoves(type, attackerColor, pos, allOccupancy);
+            if (attacks & (1ULL << square)) return true;
+        }
+    }
+
+    // Vérifier les pions (attaques diagonales uniquement)
+    uint64_t pawns = board.getPieces(attackerColor, PAWN);
+    while (pawns) {
+        uint8_t pos = __builtin_ctzll(pawns);
+        pawns &= pawns - 1;
+        uint64_t b = (1ULL << pos);
+        uint64_t pawnAttacks = 0;
+        if (attackerColor == WHITE) {
+            if (pos % 8 != 0) pawnAttacks |= (b << 7);
+            if (pos % 8 != 7) pawnAttacks |= (b << 9);
+        } else {
+            if (pos % 8 != 0) pawnAttacks |= (b >> 9);
+            if (pos % 8 != 7) pawnAttacks |= (b >> 7);
+        }
+        if (pawnAttacks & (1ULL << square)) return true;
+    }
+
+    return false;
 }
 
 MoveMasks MoveController::getPawnMoves(uint8_t pos, const ChessBitBoard& board, Color color) const {

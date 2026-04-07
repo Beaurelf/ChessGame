@@ -1,34 +1,124 @@
 #include "chessbitboard.h"
 
 ChessBitBoard::ChessBitBoard() {
+    m_castlingRights = CASTLE_WK | CASTLE_WQ | CASTLE_BK | CASTLE_BQ;
     setupDefaultBoardPieces();
 }
 
-void ChessBitBoard::update(uint8_t from, uint8_t to) {
-    Color movingColor = getPieceColor(from);
+uint8_t ChessBitBoard::getCastlingRights() const {
+    return m_castlingRights;
+}
+
+void ChessBitBoard::update(uint8_t from, uint8_t to)
+{
+    Color movingColor   = getPieceColor(from);
     PieceType movingType = getPieceType(from);
-
-    // Si une pièce adverse est présente à l'arrivée, on la supprime
+    Color enemyColor    = (movingColor == WHITE) ? BLACK : WHITE;
     PieceType capturedType = getPieceType(to);
-    if (capturedType != NONE) {
-        Color enemyColor = (movingColor == WHITE) ? BLACK : WHITE;
-        m_pieces[enemyColor][capturedType] &= ~(1ULL << to);
-    }
 
-    // On déplace la pièce
+    // Empiler l'état AVANT le mouvement
+    m_undoStack.push_back({
+        from, to,
+        movingType, capturedType , NONE,
+        movingColor, enemyColor,
+        m_castlingRights
+    });
+
+    if (capturedType != NONE)
+        m_pieces[enemyColor][capturedType] &= ~(1ULL << to);
+
     uint64_t moveMask = (1ULL << from) | (1ULL << to);
     m_pieces[movingColor][movingType] ^= moveMask;
 
-    // Mettre à jour les masques d'occupation globaux
+    // Roque : déplacer la tour
+    uint8_t distance = (from > to) ? (from - to) : (to - from);
+    if (movingType == KING && distance == 2) {
+        uint8_t rookFrom, rookTo;
+        if (to > from) {
+            // Petit roque (kingside)
+            rookFrom = (movingColor == WHITE) ? 7 : 63;
+            rookTo   = (movingColor == WHITE) ? 5 : 61;
+        } else {
+            // Grand roque (queenside)
+            rookFrom = (movingColor == WHITE) ? 0 : 56;
+            rookTo   = (movingColor == WHITE) ? 3 : 59;
+        }
+        uint64_t rookMask = (1ULL << rookFrom) | (1ULL << rookTo);
+        m_pieces[movingColor][ROOK] ^= rookMask;
+    }
+
+    // --- Mise à jour des droits de roque ---
+    if (movingType == KING) {
+        if (movingColor == WHITE) m_castlingRights &= ~(CASTLE_WK | CASTLE_WQ);
+        else m_castlingRights &= ~(CASTLE_BK | CASTLE_BQ);
+    }
+    if (movingType == ROOK) {
+        if (from == 0)  m_castlingRights &= ~CASTLE_WQ;
+        if (from == 7)  m_castlingRights &= ~CASTLE_WK;
+        if (from == 56) m_castlingRights &= ~CASTLE_BQ;
+        if (from == 63) m_castlingRights &= ~CASTLE_BK;
+    }
+    // Tour capturée
+    if (to == 0)  m_castlingRights &= ~CASTLE_WQ;
+    if (to == 7)  m_castlingRights &= ~CASTLE_WK;
+    if (to == 56) m_castlingRights &= ~CASTLE_BQ;
+    if (to == 63) m_castlingRights &= ~CASTLE_BK;
+
     updateOccupancies();
 }
 
-void ChessBitBoard::promotePawn(uint8_t pos, const PieceType& newType, const Color& color) {
-    // On retire le Pion (on éteint le bit)
-    m_pieces[color][PieceType::PAWN] &= ~(1ULL << pos);
-    // On ajoute la nouvelle pièce
-    m_pieces[color][newType] |= (1ULL << pos);
-    // On met à jour les masques globaux
+void ChessBitBoard::promotePawn(uint8_t pos, const PieceType& newType, const Color& color)
+{
+    m_pieces[color][PAWN]    &= ~(1ULL << pos);
+    m_pieces[color][newType] |=  (1ULL << pos);
+
+    // Mettre à jour le dernier UndoInfo avec la promotion
+    if (!m_undoStack.empty())
+        m_undoStack.back().promotedTo = newType;
+
+    updateOccupancies();
+}
+
+void ChessBitBoard::undo()
+{
+    if (m_undoStack.empty()) return;
+
+    UndoInfo info = m_undoStack.back();
+    m_undoStack.pop_back();
+
+    // Restaurer les droits de roque
+    m_castlingRights = info.castlingRights;
+
+    if (info.promotedTo != NONE) {
+        // Retirer la pièce promue
+        m_pieces[info.movedColor][info.promotedTo] &= ~(1ULL << info.to);
+        // Remettre le pion
+        m_pieces[info.movedColor][PAWN] |= (1ULL << info.from);
+    } else {
+        uint64_t moveMask = (1ULL << info.from) | (1ULL << info.to);
+        m_pieces[info.movedColor][info.movedType] ^= moveMask;
+    }
+
+    // Roque : restaurer la tour
+    uint8_t distance = (info.from > info.to) ? (info.from - info.to) : (info.to - info.from);
+    if (info.movedType == KING && distance == 2) {
+        uint8_t rookFrom, rookTo;
+        if (info.to > info.from) {
+            // Petit roque
+            rookFrom = (info.movedColor == WHITE) ? 7 : 63;
+            rookTo   = (info.movedColor == WHITE) ? 5 : 61;
+        } else {
+            // Grand roque
+            rookFrom = (info.movedColor == WHITE) ? 0 : 56;
+            rookTo   = (info.movedColor == WHITE) ? 3 : 59;
+        }
+        uint64_t rookMask = (1ULL << rookFrom) | (1ULL << rookTo);
+        m_pieces[info.movedColor][ROOK] ^= rookMask;
+    }
+
+    if (info.capturedType != NONE)
+        m_pieces[info.capturedColor][info.capturedType] |= (1ULL << info.to);
+
     updateOccupancies();
 }
 
@@ -83,7 +173,7 @@ uint8_t ChessBitBoard::getKingPosition(const Color& color) const
 }
 
 void ChessBitBoard::setupDefaultBoardPieces() {
-    // --- BLANCS (WHITE) ---
+    // BLANCS (WHITE)
     m_pieces[Color::WHITE][PieceType::PAWN]   = 0x000000000000FF00ULL; // Rangée 2 (a2-h2)
     m_pieces[Color::WHITE][PieceType::ROOK]   = 0x0000000000000081ULL; // a1, h1
     m_pieces[Color::WHITE][PieceType::KNIGHT] = 0x0000000000000042ULL; // b1, g1
@@ -91,7 +181,7 @@ void ChessBitBoard::setupDefaultBoardPieces() {
     m_pieces[Color::WHITE][PieceType::QUEEN]  = 0x0000000000000008ULL; // d1
     m_pieces[Color::WHITE][PieceType::KING]   = 0x0000000000000010ULL; // e1
 
-    // --- NOIRS (BLACK) ---
+    // NOIRS (BLACK)
     m_pieces[Color::BLACK][PieceType::PAWN]   = 0x00FF000000000000ULL; // Rangée 7 (a7-h7)
     m_pieces[Color::BLACK][PieceType::ROOK]   = 0x8100000000000000ULL; // a8, h8
     m_pieces[Color::BLACK][PieceType::KNIGHT] = 0x4200000000000000ULL; // b8, g8
